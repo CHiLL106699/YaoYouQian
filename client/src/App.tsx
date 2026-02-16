@@ -68,6 +68,13 @@ import LiffBookingForm from "./pages/liff/BookingForm";
 import LiffMyAppointments from "./pages/liff/MyAppointments";
 import LiffAppointmentDetail from "./pages/liff/AppointmentDetail";
 
+// BI Dashboard & Marketing Automation pages
+import BIDashboard from "./pages/BIDashboard";
+import SmartTagManagement from "./pages/SmartTagManagement";
+import CampaignTemplateManagement from "./pages/CampaignTemplateManagement";
+import CampaignExecution from "./pages/CampaignExecution";
+import ComplianceKeywordManagement from "./pages/ComplianceKeywordManagement";
+
 /** Wrap a page component with DashboardLayout + TenantProvider */
 function DashboardPage({ component: Component }: { component: React.ComponentType }) {
   return (
@@ -141,6 +148,13 @@ function Router() {
       <Route path="/consent-forms">{() => <DashboardPage component={ConsentFormManagement} />}</Route>
       <Route path="/reminder-settings">{() => <DashboardPage component={ReminderSettings} />}</Route>
       <Route path="/reminder-history">{() => <DashboardPage component={ReminderHistory} />}</Route>
+
+      {/* BI Dashboard & Marketing Automation */}
+      <Route path="/bi-dashboard">{() => <DashboardPage component={BIDashboard} />}</Route>
+      <Route path="/smart-tags">{() => <DashboardPage component={SmartTagManagement} />}</Route>
+      <Route path="/campaign-templates">{() => <DashboardPage component={CampaignTemplateManagement} />}</Route>
+      <Route path="/campaign-execution">{() => <DashboardPage component={CampaignExecution} />}</Route>
+      <Route path="/compliance-keywords">{() => <DashboardPage component={ComplianceKeywordManagement} />}</Route>
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

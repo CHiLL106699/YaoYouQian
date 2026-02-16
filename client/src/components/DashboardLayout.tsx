@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, ShoppingBag, Package, Heart, BarChart3, Settings, Ticket, Gift, CreditCard, AlertTriangle, Clock, Scale, Syringe, CheckSquare, RefreshCw, Timer, Crown, FileText, BookOpen, MessageSquare, Tag, Megaphone, Calculator, Wallet, Camera, Palette, ClipboardList, Image, FileSignature, Bell, History } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, ShoppingBag, Package, Heart, BarChart3, Settings, Ticket, Gift, CreditCard, AlertTriangle, Clock, Scale, Syringe, CheckSquare, RefreshCw, Timer, Crown, FileText, BookOpen, MessageSquare, Tag, Megaphone, Calculator, Wallet, Camera, Palette, ClipboardList, Image, FileSignature, Bell, History, PieChart, Target, Rocket, ShieldAlert } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -50,6 +50,11 @@ const menuItems = [
   { icon: ClipboardList, label: "病歷管理", path: "/medical-records", group: "醫療" },
   { icon: Image, label: "影像病歷", path: "/medical-photos", group: "醫療" },
   { icon: FileSignature, label: "同意書管理", path: "/consent-forms", group: "醫療" },
+  { icon: PieChart, label: "BI 儀表板", path: "/bi-dashboard", group: "精準行銷" },
+  { icon: Target, label: "智能標籤", path: "/smart-tags", group: "精準行銷" },
+  { icon: FileText, label: "行銷模板", path: "/campaign-templates", group: "精準行銷" },
+  { icon: Rocket, label: "執行行銷", path: "/campaign-execution", group: "精準行銷" },
+  { icon: ShieldAlert, label: "合規詞庫", path: "/compliance-keywords", group: "精準行銷" },
   { icon: Bell, label: "提醒設定", path: "/reminder-settings", group: "管理" },
   { icon: History, label: "提醒歷史", path: "/reminder-history", group: "管理" },
   { icon: CheckSquare, label: "審核佇列", path: "/approval-queue", group: "管理" },

@@ -40,6 +40,11 @@ import { medicalRecordRouter } from "./routers/medicalRecordRouter";
 import { medicalPhotoRouter } from "./routers/medicalPhotoRouter";
 import { consentFormRouter } from "./routers/consentFormRouter";
 import { appointmentReminderRouter } from "./routers/appointmentReminderRouter";
+import { biDashboardRouter } from "./routers/biDashboardRouter";
+import { smartTagRouter } from "./routers/smartTagRouter";
+import { campaignTemplateRouter } from "./routers/campaignTemplateRouter";
+import { complianceRouter } from "./routers/complianceRouter";
+import { campaignExecutionRouter } from "./routers/campaignExecutionRouter";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
@@ -100,6 +105,11 @@ export const appRouter = router({
   medicalPhoto: medicalPhotoRouter,
   consentForm: consentFormRouter,
   appointmentReminder: appointmentReminderRouter,
+  biDashboard: biDashboardRouter,
+  smartTag: smartTagRouter,
+  campaignTemplate: campaignTemplateRouter,
+  compliance: complianceRouter,
+  campaignExecution: campaignExecutionRouter,
 });
 
 export type AppRouter = typeof appRouter;
