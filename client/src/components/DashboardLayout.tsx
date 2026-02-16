@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, ShoppingBag, Package, Heart, BarChart3, Settings, Ticket, Gift, CreditCard, AlertTriangle, Clock, Scale, Syringe, CheckSquare, RefreshCw, Timer, Crown, FileText, BookOpen, MessageSquare, Tag, Megaphone, Calculator, Wallet, Camera, Palette, ClipboardList, Image, FileSignature, Bell, History, PieChart, Target, Rocket, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, ShoppingBag, Package, Heart, BarChart3, Settings, Ticket, Gift, CreditCard, AlertTriangle, Clock, Scale, Syringe, CheckSquare, RefreshCw, Timer, Crown, FileText, BookOpen, MessageSquare, Tag, Megaphone, Calculator, Wallet, Camera, Palette, ClipboardList, Image, FileSignature, Bell, History, PieChart, Target, Rocket, ShieldAlert, UserCog, DollarSign, Receipt, Boxes, ListTree } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -67,6 +67,14 @@ const menuItems = [
   { icon: MessageSquare, label: "LINE Bot 設定", path: "/line-config", group: "設定" },
   { icon: Palette, label: "白標設定", path: "/whitelabel", group: "設定" },
   { icon: AlertTriangle, label: "錯誤日誌", path: "/error-logs", group: "設定" },
+  { icon: UserCog, label: "員工管理", path: "/staff", group: "人事薪資" },
+  { icon: DollarSign, label: "分潤規則", path: "/commission-rules", group: "人事薪資" },
+  { icon: Receipt, label: "分潤記錄", path: "/commission-records", group: "人事薪資" },
+  { icon: ClipboardList, label: "薪資總表", path: "/payroll", group: "人事薪資" },
+  { icon: Boxes, label: "庫存管理", path: "/inventory", group: "庫存管理" },
+  { icon: ListTree, label: "BOM 物料清單", path: "/service-materials", group: "庫存管理" },
+  { icon: History, label: "庫存異動", path: "/inventory-transactions", group: "庫存管理" },
+  { icon: Bell, label: "低庫存警示", path: "/low-stock-alerts", group: "庫存管理" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

@@ -62,6 +62,14 @@ import MedicalPhotoManagement from "./pages/MedicalPhotoManagement";
 import ConsentFormManagement from "./pages/ConsentFormManagement";
 import ReminderSettings from "./pages/ReminderSettings";
 import ReminderHistory from "./pages/ReminderHistory";
+import StaffManagement from "./pages/StaffManagement";
+import CommissionRules from "./pages/CommissionRules";
+import CommissionRecords from "./pages/CommissionRecords";
+import PayrollDashboard from "./pages/PayrollDashboard";
+import InventoryManagement from "./pages/InventoryManagement";
+import ServiceMaterialManagement from "./pages/ServiceMaterialManagement";
+import InventoryTransactionHistory from "./pages/InventoryTransactionHistory";
+import LowStockAlerts from "./pages/LowStockAlerts";
 import LiffMemberCenter from "./pages/LiffMemberCenter";
 import LiffCare from "./pages/LiffCare";
 import LiffBookingForm from "./pages/liff/BookingForm";
@@ -155,6 +163,18 @@ function Router() {
       <Route path="/campaign-templates">{() => <DashboardPage component={CampaignTemplateManagement} />}</Route>
       <Route path="/campaign-execution">{() => <DashboardPage component={CampaignExecution} />}</Route>
       <Route path="/compliance-keywords">{() => <DashboardPage component={ComplianceKeywordManagement} />}</Route>
+
+      {/* === HRM / Payroll routes === */}
+      <Route path="/staff">{() => <DashboardPage component={StaffManagement} />}</Route>
+      <Route path="/commission-rules">{() => <DashboardPage component={CommissionRules} />}</Route>
+      <Route path="/commission-records">{() => <DashboardPage component={CommissionRecords} />}</Route>
+      <Route path="/payroll">{() => <DashboardPage component={PayrollDashboard} />}</Route>
+
+      {/* === ERP / Inventory routes === */}
+      <Route path="/inventory">{() => <DashboardPage component={InventoryManagement} />}</Route>
+      <Route path="/service-materials">{() => <DashboardPage component={ServiceMaterialManagement} />}</Route>
+      <Route path="/inventory-transactions">{() => <DashboardPage component={InventoryTransactionHistory} />}</Route>
+      <Route path="/low-stock-alerts">{() => <DashboardPage component={LowStockAlerts} />}</Route>
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

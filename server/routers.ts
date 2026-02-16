@@ -45,6 +45,12 @@ import { smartTagRouter } from "./routers/smartTagRouter";
 import { campaignTemplateRouter } from "./routers/campaignTemplateRouter";
 import { complianceRouter } from "./routers/complianceRouter";
 import { campaignExecutionRouter } from "./routers/campaignExecutionRouter";
+import { staffRouter } from "./routers/staffRouter";
+import { commissionRuleRouter } from "./routers/commissionRuleRouter";
+import { commissionRecordRouter } from "./routers/commissionRecordRouter";
+import { inventoryRouter } from "./routers/inventoryRouter";
+import { serviceMaterialRouter } from "./routers/serviceMaterialRouter";
+import { inventoryTransactionRouter } from "./routers/inventoryTransactionRouter";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
@@ -110,6 +116,16 @@ export const appRouter = router({
   campaignTemplate: campaignTemplateRouter,
   compliance: complianceRouter,
   campaignExecution: campaignExecutionRouter,
+
+  // HRM/Payroll Module
+  staff: staffRouter,
+  commissionRule: commissionRuleRouter,
+  commissionRecord: commissionRecordRouter,
+
+  // ERP Inventory Module
+  inventory: inventoryRouter,
+  serviceMaterial: serviceMaterialRouter,
+  inventoryTransaction: inventoryTransactionRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,144 +1,264 @@
-# 曜友仟管理雲：EMR 與預約提醒模組開發計畫
+# 曜友仟管理雲：新功能模組架構分析
 
-**作者：** Manus AI
-**日期：** 2026年2月17日
+## 1. 專案目標
 
-## 1. 專案背景與目標
+本文件旨在規劃與說明「曜友仟管理雲」兩大核心功能模組的開發架構：
+1.  **多角色自動分潤系統 (HRM/Payroll)**
+2.  **庫存與耗材聯動扣抵 (ERP)**
 
-本文件旨在規劃「曜友仟管理雲」的兩大核心功能模組：**智能會員與影像病歷系統 (EMR)** 以及 **多層次智能預約與自動提醒系統**。計畫將遵循使用者要求的技術棧與開發規範，在現有專案基礎上進行擴充，確保新舊功能無縫整合、代碼可維護性與資訊安全。
+此分析將遵循現有專案的技術棧（React, tRPC, Supabase）與代碼風格，確保新功能無縫整合且符合資安與可維護性標準。
 
-## 2. 現有架構分析
+## 2. 資料庫架構 (Database Schema)
 
-在 clone `CHiLL106699/YaoYouQian` repo 並進行全面分析後，歸納出以下關鍵架構與開發模式：
+將於 Supabase 資料庫中建立以下資料表。所有資料表都將包含 `tenant_id` 以符合多租戶架構的 RLS（Row-Level Security）策略。
 
-| 構面 | 分析結果 |
-| :--- | :--- |
-| **專案結構** | 採用 Monorepo 架構，`client/` (Vite + React) 和 `server/` (Node.js + Express) 分離。 |
-| **前端框架** | 使用 React v19、TypeScript、TailwindCSS 及 shadcn/ui 元件庫，確保了現代化的 UI/UX 與開發效率。 |
-| **前端路由** | `wouter` 函式庫負責路由管理。需在 `client/src/App.tsx` 中註冊新頁面路由。 |
-| **狀態管理** | 全域狀態主要透過 React Context API 管理，例如 `TenantProvider` 提供 `tenantId`。 |
-| **後端 API** | `tRPC` 作為主要的 API 層，提供型別安全的端對端開發體驗。後端 tRPC Router 透過 `supabase-js` 客戶端與資料庫互動。 |
-| **資料庫** | Supabase (PostgreSQL) 作為核心資料庫。後端服務透過 `service_role` 金鑰進行操作，符合安全實踐。 |
-| **身分驗證** | Supabase Auth 負責使用者驗證與會話管理。前端透過 `useAuth` hook 取得使用者資訊。 |
-| **檔案儲存** | 專案中已有 `customerPhotoRouter.ts`，但檔案上傳邏輯尚未完全實現。將採用 Supabase Storage 作為統一的檔案儲存方案。 |
-| **排程任務** | 專案中存在 `supabase/functions/send-booking-reminder` 的 Edge Function，顯示現有模式是利用 Supabase 的排程功能 (pg_cron) 觸發 Edge Function 來執行背景任務。 |
+### 2.1 HRM/Payroll 相關資料表
 
-## 3. 開發計畫與資料流設計
+```sql
+-- 員工資料表
+CREATE TABLE staff (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    tenant_id BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    role_type VARCHAR(50) NOT NULL CHECK (role_type IN ('consultant', 'doctor', 'nurse', 'admin')),
+    line_user_id VARCHAR(255) UNIQUE,
+    phone VARCHAR(50),
+    email VARCHAR(255) UNIQUE,
+    base_salary DECIMAL(12, 2) DEFAULT 0.00,
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-基於以上分析，我將遵循現有模式，提出以下開發計畫與資料流圖。
+-- 分潤規則表
+CREATE TABLE commission_rules (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    tenant_id BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    service_id BIGINT REFERENCES services(id) ON DELETE SET NULL, -- 可針對特定服務或通用角色
+    role_type VARCHAR(50) NOT NULL CHECK (role_type IN ('consultant', 'doctor', 'nurse', 'admin')),
+    commission_rate DECIMAL(5, 4) NOT NULL, -- 例如 0.1000 代表 10%
+    condition_type VARCHAR(50) NOT NULL DEFAULT 'immediate' CHECK (condition_type IN ('immediate', 'deferred', 'milestone')),
+    condition_value JSONB, -- 儲存遞延或里程碑的具體條件
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(tenant_id, service_id, role_type) -- 確保規則的唯一性
+);
 
-### 3.1. 模組一：智能會員與影像病歷系統 (EMR)
+-- 訂單-員工角色關聯表 (多對多)
+CREATE TABLE staff_order_roles (
+    order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    staff_id BIGINT NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+    role_type VARCHAR(50) NOT NULL CHECK (role_type IN ('consultant', 'doctor', 'nurse', 'admin')),
+    PRIMARY KEY (order_id, staff_id, role_type)
+);
 
-此模組旨在建立一個完整的病歷管理系統，包含病歷記錄、影像管理及電子同意書簽署。
-
-#### 資料庫結構 (Supabase)
-
-將建立以下三個核心資料表：
-
-- `medical_records`: 儲存核心病歷資訊。
-- `medical_photos`: 儲存與病歷關聯的影像，並透過 `photo_type` 區分術前、術後、進程中照片。
-- `consent_forms`: 儲存病患簽署的電子同意書，簽名將以 Base64 格式儲存於 `signature_data` 欄位。
-
-#### 資料流向圖
-
-```mermaid
-flowchart TD
-    subgraph Client (React)
-        A[MedicalRecordManagement.tsx] -- tRPC --> B
-        C[BeforeAfterSlider.tsx] -- 讀取照片 --> B
-        D[ConsentFormManagement.tsx] -- tRPC --> E
-        F[SignaturePad.tsx] -- 產生 Base64 簽名 --> D
-    end
-
-    subgraph Server (tRPC)
-        B[medicalRecordRouter.ts] -- Supabase Client --> G[medical_records]
-        H[medicalPhotoRouter.ts] -- Supabase Client --> I[medical_photos]
-        H -- Supabase Storage --> J[檔案儲存 Bucket]
-        E[consentFormRouter.ts] -- Supabase Client --> K[consent_forms]
-    end
-
-    subgraph Supabase
-        G
-        I
-        J
-        K
-    end
-
-    A -- 讀取/寫入 --> B
-    D -- 讀取/寫入 --> E
-    A -- 觸發照片上傳 --> H
+-- 分潤記錄表
+CREATE TABLE commission_records (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    staff_id BIGINT NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+    tenant_id BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    role_type VARCHAR(50) NOT NULL,
+    amount DECIMAL(12, 2) NOT NULL, -- 分潤金額
+    rate DECIMAL(5, 4) NOT NULL, -- 當下套用的比率
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'partial', 'paid', 'cancelled')),
+    paid_at TIMESTAMPTZ,
+    deferred_conditions JSONB, -- 記錄當時的遞延條件
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 ```
 
-### 3.2. 模組二：多層次智能預約與自動提醒
+### 2.2 ERP 相關資料表
 
-此模組旨在實現一個高併發安全的預約系統，並能自動透過 LINE 發送多階段提醒。
+```sql
+-- 庫存品項表
+CREATE TABLE inventory (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    tenant_id BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    item_name VARCHAR(255) NOT NULL,
+    sku VARCHAR(100) UNIQUE,
+    category VARCHAR(100),
+    unit VARCHAR(50) NOT NULL,
+    stock_quantity INTEGER NOT NULL DEFAULT 0,
+    safety_threshold INTEGER NOT NULL DEFAULT 0,
+    cost_price DECIMAL(10, 2),
+    supplier VARCHAR(255),
+    last_restocked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-#### 資料庫結構 (Supabase)
+-- 服務物料清單 (BOM)
+CREATE TABLE service_materials (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    service_id BIGINT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    inventory_id BIGINT NOT NULL REFERENCES inventory(id) ON DELETE CASCADE,
+    tenant_id BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    quantity_per_use DECIMAL(10, 2) NOT NULL,
+    unit VARCHAR(50) NOT NULL,
+    notes TEXT,
+    UNIQUE(service_id, inventory_id)
+);
 
-將建立以下兩個支援功能的資料表：
+-- 庫存異動記錄表
+CREATE TABLE inventory_transactions (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    inventory_id BIGINT NOT NULL REFERENCES inventory(id) ON DELETE RESTRICT,
+    tenant_id BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    transaction_type VARCHAR(50) NOT NULL CHECK (transaction_type IN ('consume', 'restock', 'adjust', 'return')),
+    quantity INTEGER NOT NULL, -- 正數為增加，負數為減少
+    reference_id BIGINT, -- 關聯的訂單ID、採購單ID等
+    reference_type VARCHAR(100), -- 例如 'order', 'purchase'
+    operator_id BIGINT REFERENCES staff(id), -- 操作人員
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-- `appointment_reminders`: 記錄所有已發送的提醒，用於追蹤與避免重複發送。
-- `appointment_locks`: 預約鎖定表，透過資料庫 Transaction 與 Row-level locking 防止在高併發場景下同一時段被超賣。
-
-#### 資料流向圖
-
-```mermaid
-flowchart TD
-    subgraph Client (React)
-        L[ReminderSettings.tsx] -- tRPC --> M[appointmentReminderRouter.ts]
-        N[ReminderHistory.tsx] -- tRPC --> M
-    end
-
-    subgraph Server (tRPC)
-        M -- Supabase Client --> O[appointment_reminders]
-        P[appointmentLock.ts] -- Supabase Transaction --> Q[appointment_locks]
-    end
-
-    subgraph Supabase
-        O
-        Q
-        R[pg_cron Scheduler] -- 觸發 --> S[Edge Function: reminderScheduler]
-    end
-
-    subgraph Supabase Edge Function
-        S -- 讀取預約 --> T[appointments]
-        S -- 寫入記錄 --> O
-        S -- LINE Messaging API --> U[LINE 使用者]
-    end
+-- 低庫存警示表
+CREATE TABLE low_stock_alerts (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    inventory_id BIGINT NOT NULL REFERENCES inventory(id) ON DELETE CASCADE,
+    tenant_id BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    current_stock INTEGER NOT NULL,
+    threshold INTEGER NOT NULL,
+    alert_type VARCHAR(50) NOT NULL CHECK (alert_type IN ('warning', 'critical')),
+    notified_at TIMESTAMPTZ,
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 ```
 
-## 4. 預計新增/修改的檔案清單
+## 3. 資料流向圖 (Data Flow Diagram)
 
-根據上述計畫，將會新增或修改以下檔案：
+以下為核心業務邏輯的資料流向。
 
-| 類型 | 路徑 | 說明 |
-| :--- | :--- | :--- |
-| **後端 Router** | `server/routers/medicalRecordRouter.ts` | 新增：病歷 CRUD。 |
-| | `server/routers/medicalPhotoRouter.ts` | 新增：影像上傳與查詢。 |
-| | `server/routers/consentFormRouter.ts` | 新增：同意書 CRUD。 |
-| | `server/routers/appointmentReminderRouter.ts` | 新增：提醒設定與歷史查詢。 |
-| **後端工具** | `server/utils/appointmentLock.ts` | 新增：預約鎖定機制。 |
-| **排程任務** | `supabase/functions/reminderScheduler/index.ts` | 新增：掃描預約並發送 LINE 提醒的背景邏輯。 |
-| **前端頁面** | `client/src/pages/MedicalRecordManagement.tsx` | 新增：病歷管理主頁面。 |
-| | `client/src/pages/ConsentFormManagement.tsx` | 新增：同意書管理主頁面。 |
-| | `client/src/pages/ReminderSettings.tsx` | 新增：預約提醒設定頁面。 |
-| | `client/src/pages/ReminderHistory.tsx` | 新增：提醒發送歷史頁面。 |
-| **前端元件** | `client/src/components/BeforeAfterSlider.tsx` | 新增：術前術後照片滑動比對元件。 |
-| | `client/src/components/SignaturePad.tsx` | 新增：電子簽名 Canvas 元件。 |
-| **核心整合** | `server/routers.ts` | 修改：註冊上述四個新的 tRPC Router。 |
-| | `client/src/App.tsx` | 修改：加入 `/medical-records`, `/consent-forms`, `/reminder-settings`, `/reminder-history` 四個路由。 |
-| | `client/src/components/DashboardLayout.tsx` | 修改：在側邊欄加入對應的功能導航連結。 |
+### 3.1 自動分潤流程
 
-## 5. 開發步驟規劃
+```mermaid
+graph TD
+    A[訂單完成] --> B{觸發分潤計算};
+    B --> C{讀取 staff_order_roles};
+    C --> D{找出參與員工與角色};
+    D --> E{讀取 commission_rules};
+    E --> F{比對 service_id 和 role_type};
+    F --> G{計算分潤金額};
+    G --> H{判斷 condition_type};
+    H -- immediate --> I[建立 commission_records (status=pending)];
+    H -- deferred/milestone --> J[建立 commission_records (status=partial, 記錄觸發條件)];
+    K[管理者手動觸發] --> L{更新 commission_records (status=paid)};
+    M[批次發放] --> L;
+```
 
-我將遵循以下階段進行開發，確保每個階段的交付物都符合預期：
+### 3.2 自動扣庫存流程
 
-1.  **Phase 1: 資料庫建置** - 根據設計在 Supabase 中建立所有新資料表。
-2.  **Phase 2: 後端開發** - 開發所有 tRPC Router、工具函式庫及 Edge Function。
-3.  **Phase 3: 前端開發** - 開發所有 React 頁面與元件。
-4.  **Phase 4: 整合與測試** - 將前後端串接，註冊路由與導航，並進行完整的功能測試與 `tsc --noEmit`、`pnpm build` 驗證。
-5.  **Phase 5: 交付** - 將所有代碼 push 至 GitHub repo，並提供最終的檔案變更清單。
+```mermaid
+graph TD
+    A[護理師點擊「療程完成」] --> B{觸發庫存扣抵};
+    B --> C{讀取 service_materials (BOM)};
+    C --> D{找出對應耗材與數量};
+    D --> E{For each 耗材...};
+    E --> F[更新 inventory.stock_quantity];
+    F --> G[建立 inventory_transactions 記錄];
+    G --> H{檢查庫存是否低於安全水位};
+    H -- Yes --> I[建立 low_stock_alerts 記錄];
+    H -- No --> J[結束];
+    I --> K[發送通知給管理者];
+```
+
+## 4. 後端架構 (Backend Architecture)
+
+將遵循現有的 tRPC 模式，在 `server/routers/` 目錄下建立新的 Router 檔案，並在 `server/routers.ts` 中註冊。
+
+### 4.1 HRM/Payroll Routers
+
+-   **`server/routers/staffRouter.ts`**
+    -   `list`: `protectedProcedure` - 查詢員工列表，可按角色篩選。
+    -   `create`: `adminProcedure` - 新增員工。
+    -   `update`: `adminProcedure` - 更新員工資料。
+    -   `set_status`: `adminProcedure` - 變更員工狀態 (active/inactive)。
+-   **`server/routers/commissionRouter.ts`**
+    -   `rules.list`: `protectedProcedure` - 查詢分潤規則列表。
+    -   `rules.create`: `adminProcedure` - 新增分潤規則。
+    -   `rules.update`: `adminProcedure` - 更新分潤規則。
+    -   `rules.delete`: `adminProcedure` - 刪除分潤規則。
+    -   `records.list`: `protectedProcedure` - 查詢分潤記錄，可按員工、月份、狀態篩選。
+    -   `records.trigger_deferred`: `adminProcedure` - 手動觸發遞延條件。
+    -   `records.batch_payout`: `adminProcedure` - 批次發放分潤，更新記錄狀態為 `paid`。
+    -   `reports.by_staff`: `protectedProcedure` - 產生指定員工的分潤報表。
+-   **`server/routers/orderRouter.ts` (修改)**
+    -   `assign_staff`: `protectedProcedure` - 為訂單指派不同角色的員工 (寫入 `staff_order_roles`)。
+    -   `complete_order`: `protectedProcedure` (修改) - 在訂單完成邏輯中，加入呼叫分潤計算的觸發器。
+
+### 4.2 ERP Routers
+
+-   **`server/routers/inventoryRouter.ts`**
+    -   `list`: `protectedProcedure` - 查詢庫存列表，可篩選低於安全水位的品項。
+    -   `create`: `adminProcedure` - 新增庫存品項。
+    -   `update`: `adminProcedure` - 更新庫存品項。
+    -   `restock`: `adminProcedure` - 登記進貨，增加庫存數量。
+    -   `adjust`: `adminProcedure` - 手動調整庫存數量。
+-   **`server/routers/serviceMaterialRouter.ts`**
+    -   `list`: `protectedProcedure` - 查詢指定服務的 BOM 物料清單。
+    -   `set`: `adminProcedure` - 設定/更新一個服務的 BOM。
+-   **`server/routers/inventoryTransactionRouter.ts`**
+    -   `list`: `protectedProcedure` - 查詢庫存異動歷史記錄。
+-   **`server/routers/lowStockAlertRouter.ts`**
+    -   `list`: `protectedProcedure` - 查詢所有未解決的低庫存警示。
+    -   `resolve`: `adminProcedure` - 標記警示為已處理。
+
+## 5. 前端架構 (Frontend Architecture)
+
+將在 `client/src/pages/` 目錄下建立新的頁面元件，並使用 `wouter` 在 `client/src/App.tsx` 中設定路由。所有需授權的頁面都將由 `DashboardLayout` 元件包裹。
+
+### 5.1 HRM/Payroll 頁面
+
+-   `client/src/pages/StaffManagement.tsx` (`/staff`)
+-   `client/src/pages/CommissionRuleManagement.tsx` (`/commission-rules`)
+-   `client/src/pages/CommissionDashboard.tsx` (`/commission-dashboard`)
+-   `client/src/pages/OrderStaffAssignment.tsx` (`/order-staff-assignment`)
+
+### 5.2 ERP 頁面
+
+-   `client/src/pages/InventoryManagement.tsx` (`/inventory`)
+-   `client/src/pages/ServiceMaterialManagement.tsx` (`/service-materials`)
+-   `client/src/pages/InventoryTransactionHistory.tsx` (`/inventory-transactions`)
+-   `client/src/pages/LowStockAlerts.tsx` (`/low-stock-alerts`)
+
+### 5.3 導航與路由整合
+
+-   **`client/src/App.tsx`**: 新增上述 8 個路由。
+-   **`client/src/components/DashboardLayout.tsx`**: 在 `menuItems` 陣列中加入新的導航分組與項目：
+    -   **人事分潤**: 員工管理, 分潤規則, 分潤儀表板, 訂單角色指派
+    -   **庫存管理**: 庫存列表, BOM設定, 異動歷史, 低庫存警示
+
+## 6. 預計新增/修改檔案清單
+
+### 新增檔案
+
+-   `server/routers/staffRouter.ts`
+-   `server/routers/commissionRouter.ts`
+-   `server/routers/inventoryRouter.ts`
+-   `server/routers/serviceMaterialRouter.ts`
+-   `server/routers/inventoryTransactionRouter.ts`
+-   `server/routers/lowStockAlertRouter.ts`
+-   `client/src/pages/StaffManagement.tsx`
+-   `client/src/pages/CommissionRuleManagement.tsx`
+-   `client/src/pages/CommissionDashboard.tsx`
+-   `client/src/pages/OrderStaffAssignment.tsx`
+-   `client/src/pages/InventoryManagement.tsx`
+-   `client/src/pages/ServiceMaterialManagement.tsx`
+-   `client/src/pages/InventoryTransactionHistory.tsx`
+-   `client/src/pages/LowStockAlerts.tsx`
+-   `.env` (用於存放 Supabase 連線資訊)
+
+### 修改檔案
+
+-   `server/routers.ts` (註冊新的 tRPC routers)
+-   `server/routers/orderRouter.ts` (加入 staff 指派與分潤觸發邏輯)
+-   `client/src/App.tsx` (加入新頁面的路由)
+-   `client/src/components/DashboardLayout.tsx` (加入側邊欄導航連結)
 
 ---
 
-此架構分析與開發計畫已完成。若您批准此計畫，我將立即開始第一階段的開發工作。
+此架構設計完畢，待 Tech Lead 審核批准後，即可進入開發階段。
