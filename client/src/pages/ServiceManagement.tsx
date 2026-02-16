@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { trpc } from '../lib/trpc';
+import { useTenant } from '@/contexts/TenantContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -11,7 +12,7 @@ import { toast } from 'sonner';
 import { Upload, Plus, Edit, Trash2, Power, PowerOff } from 'lucide-react';
 
 export default function ServiceManagement() {
-  const [tenantId] = useState(1); // TODO: 從認證系統取得
+  const { tenantId } = useTenant();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<any>(null);

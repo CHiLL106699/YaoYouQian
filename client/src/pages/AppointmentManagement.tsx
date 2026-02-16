@@ -157,7 +157,16 @@ function ListView() {
                 </Table>
             </CardContent>
         </Card>
-         {/* TODO: Pagination controls */}
+         {/* 分頁控制 */}
+         {data && (
+           <div className="flex items-center justify-between mt-4">
+             <p className="text-sm text-muted-foreground">第 {page} 頁，共 {data.total} 筆</p>
+             <div className="flex gap-2">
+               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一頁</Button>
+               <Button variant="outline" size="sm" disabled={page * 20 >= data.total} onClick={() => setPage(p => p + 1)}>下一頁</Button>
+             </div>
+           </div>
+         )}
     </div>
   );
 }

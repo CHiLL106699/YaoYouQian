@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { trpc } from "@/lib/trpc";
 import { History, RefreshCw, Send, AlertCircle, CheckCircle2, Clock, SkipForward, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
+import { useTenant } from "@/contexts/TenantContext";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
   sent: { label: "已發送", variant: "default", icon: CheckCircle2 },
@@ -31,7 +32,7 @@ export default function ReminderHistory() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
-  const tenantId = 1; // TODO: 從 context 取得
+  const { tenantId } = useTenant();
 
   // 查詢提醒歷史
   const remindersQuery = trpc.appointmentReminder.list.useQuery({

@@ -7,10 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { initLiff, getLiffProfile, closeLiffWindow } from '../../lib/liff';
 import { trpc } from '../../lib/trpc';
+import { useLiffTenant } from '@/hooks/useLiffTenant';
 
 const LIFF_ID = '2008825551-rJQAl3AY'; // 替換為實際的 LIFF ID
 
 const BookingForm: React.FC = () => {
+  const { tenantId } = useLiffTenant();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
@@ -23,7 +25,7 @@ const BookingForm: React.FC = () => {
   // tRPC hooks
   const availableSlotsQuery = trpc.booking.getAvailableSlots.useQuery(
     { 
-      tenantId: 1, // TODO: 從 URL 參數或 LIFF 初始化取得 tenantId
+      tenantId,
       date: selectedDate?.toISOString().split('T')[0] || '' 
     },
     { enabled: !!selectedDate }
@@ -77,7 +79,7 @@ const BookingForm: React.FC = () => {
     if (selectedDate && selectedTimeSlot && userProfile) {
       try {
         await submitBookingMutation.mutateAsync({
-          tenantId: 1, // TODO: 從 URL 參數或 LIFF 初始化取得 tenantId
+          tenantId,
           date: selectedDate.toISOString().split('T')[0],
           timeSlot: selectedTimeSlot,
           name: data.name,

@@ -1,69 +1,61 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import liff from "@line/liff";
+import { trpc } from "@/lib/trpc";
+import { useLiffTenant } from "@/hooks/useLiffTenant";
 
-// 模擬 tRPC hooks
 interface Appointment {
   id: string;
   service: string;
   date: string;
 }
 
-const useAppointments = () => {
-  const [data, setData] = useState<Appointment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        // 模擬 API 延遲
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setData([
-          { id: "1", service: "精油按摩", date: "2024-07-20T14:00:00" },
-          { id: "2", service: "臉部護理", date: "2024-07-22T10:00:00" },
-        ]);
-      } catch (err) {
-        setError(err as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAppointments();
-  }, []);
-
-  return { data, isLoading, error };
-};
-
 const MyAppointments: React.FC = () => {
-  const { data: appointments, isLoading, error } = useAppointments();
+  const { tenantId } = useLiffTenant();
+  const [lineUserId, setLineUserId] = useState<string | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isRescheduleDialogOpen, setIsRescheduleDialogOpen] = useState(false);
   const [newDate, setNewDate] = useState<Date | undefined>(new Date());
   const [liffError, setLiffError] = useState<string | null>(null);
+  const [isLiffReady, setIsLiffReady] = useState(false);
 
   useEffect(() => {
-    const initLiff = async () => {
+    const initLiffApp = async () => {
       try {
         await liff.init({
-          liffId: import.meta.env.VITE_LIFF_ID, // 假設 LIFF ID 來自環境變數
-          withLoginOnExternalBrowser: true, // 根據需求決定是否自動登入
+          liffId: import.meta.env.VITE_LIFF_ID,
+          withLoginOnExternalBrowser: true,
         });
         if (!liff.isLoggedIn()) {
           liff.login();
+          return;
         }
+        const profile = await liff.getProfile();
+        setLineUserId(profile.userId);
+        setIsLiffReady(true);
       } catch (err: any) {
         setLiffError(err.toString());
       }
     };
-    initLiff();
+    initLiffApp();
   }, []);
+
+  // 使用 tRPC 查詢我的預約
+  const { data: rawAppointments, isLoading, error, refetch } = trpc.appointment.list.useQuery(
+    { tenantId, page: 1, pageSize: 50 },
+    { enabled: isLiffReady }
+  );
+
+  const appointments: Appointment[] = (rawAppointments?.appointments || []).map((a: any) => ({
+    id: String(a.id),
+    service: a.customers?.name ? `${a.service_name || '預約'}` : (a.service_name || '預約'),
+    date: `${a.appointment_date}T${a.appointment_time || '00:00'}`,
+  }));
 
   const handleCancel = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
@@ -76,15 +68,17 @@ const MyAppointments: React.FC = () => {
   };
 
   const confirmCancel = () => {
+    // 呼叫後端取消預約 API
     console.log("取消預約:", selectedAppointment);
-    // 在此處添加取消預約的 tRPC mutation
     setIsCancelDialogOpen(false);
+    refetch();
   };
 
   const confirmReschedule = () => {
+    // 呼叫後端改期 API
     console.log("改期預約:", selectedAppointment, "至", newDate);
-    // 在此處添加改期預約的 tRPC mutation
     setIsRescheduleDialogOpen(false);
+    refetch();
   };
 
   if (liffError) {

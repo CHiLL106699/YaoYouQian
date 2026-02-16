@@ -163,7 +163,7 @@ export const tenantRouter = router({
     }),
 
   /**
-   * 取得當前租戶資訊
+   * 取得當前租戶資訊（by tenantId）
    */
   getCurrent: protectedProcedure
     .input(z.object({
@@ -181,6 +181,40 @@ export const tenantRouter = router({
           code: 'NOT_FOUND',
           message: '找不到租戶資料'
         });
+      }
+
+      return tenant;
+    }),
+
+  /**
+   * 根據 Supabase Auth User ID 安全查詢租戶資訊
+   * 此 procedure 在後端使用 service_role 查詢，前端無需直接讀取 tenants 表
+   */
+  getByAuthUser: publicProcedure
+    .input(z.object({
+      authUserId: z.string().uuid(),
+      email: z.string().email().optional(),
+    }))
+    .query(async ({ input }) => {
+      // 先以 auth_user_id 查詢
+      let { data: tenant } = await supabase
+        .from('tenants')
+        .select('id, name, subdomain, status')
+        .eq('auth_user_id', input.authUserId)
+        .single();
+
+      // 若找不到，以 email 查詢
+      if (!tenant && input.email) {
+        const { data: tenantByEmail } = await supabase
+          .from('tenants')
+          .select('id, name, subdomain, status')
+          .eq('owner_email', input.email)
+          .single();
+        tenant = tenantByEmail;
+      }
+
+      if (!tenant) {
+        return null;
       }
 
       return tenant;

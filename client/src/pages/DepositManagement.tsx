@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { DollarSign, Plus, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { useTenant } from "@/contexts/TenantContext";
 
 export default function DepositManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -23,8 +24,8 @@ export default function DepositManagement() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [notes, setNotes] = useState("");
 
-  // TODO: 從 context 或 URL 取得 tenantId
-  const tenantId = 1;
+  
+  const { tenantId } = useTenant();
 
   // 查詢客戶列表
   const { data: customersData } = trpc.customer.list.useQuery({ tenantId, page: 1, pageSize: 100 });

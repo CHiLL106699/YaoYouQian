@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { FileSignature, Plus, Trash2, Eye, RefreshCw, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { useTenant } from "@/contexts/TenantContext";
 
 const formTypes = [
   { value: "general", label: "一般同意書" },
@@ -37,7 +38,7 @@ export default function ConsentFormManagement() {
     formType: "general",
     witnessName: "",
   });
-  const tenantId = 1; // TODO: 從 context 取得
+  const { tenantId } = useTenant();
 
   // 查詢同意書列表
   const formsQuery = trpc.consentForm.list.useQuery({

@@ -119,9 +119,11 @@ function Router() {
       <Route path="/customers">{() => <DashboardPage component={CustomerManagement} />}</Route>
       <Route path="/vouchers">{() => <DashboardPage component={VoucherManagement} />}</Route>
       <Route path="/marketing-campaigns">{() => <DashboardPage component={MarketingCampaignManagement} />}</Route>
+      <Route path="/marketing-campaign-management">{() => <DashboardPage component={MarketingCampaignManagement} />}</Route>
       <Route path="/slot-calculator">{() => <DashboardPage component={SlotCalculatorManagement} />}</Route>
       <Route path="/customer-photos">{() => <DashboardPage component={CustomerPhotoManagement} />}</Route>
       <Route path="/deposits">{() => <DashboardPage component={DepositManagement} />}</Route>
+      <Route path="/deposit-management">{() => <DashboardPage component={DepositManagement} />}</Route>
       <Route path="/whitelabel">{() => <DashboardPage component={WhiteLabelSettings} />}</Route>
       <Route path="/subscription">{() => <DashboardPage component={SubscriptionManagement} />}</Route>
       <Route path="/settings">{() => <DashboardPage component={TenantSettings} />}</Route>

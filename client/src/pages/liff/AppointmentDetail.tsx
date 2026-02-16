@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Calendar, Clock, User, ArrowLeft, Share2 } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { trpc } from '@/lib/trpc';
 
 interface AppointmentDetailProps {
   params: { id: string };
@@ -37,16 +38,20 @@ const AppointmentDetail: React.FC<AppointmentDetailProps> = ({ params }) => {
     initLiff();
   }, []);
 
-  // 模擬資料（TODO: 接 trpc.appointment.getById）
-  const appointment = {
-    id: appointmentId,
-    serviceName: '精油按摩',
-    date: '2024-07-20T14:00:00',
-    time: '14:00',
-    userName: '王小明',
-    status: '已確認',
-  };
-  const isLoading = false;
+  // 透過 tRPC 取得預約詳情
+  const { data: rawAppointment, isLoading } = trpc.appointment.getById.useQuery(
+    { appointmentId: Number(appointmentId) },
+    { enabled: !!appointmentId && isLiffInitialized }
+  );
+
+  const appointment = rawAppointment ? {
+    id: String(rawAppointment.id),
+    serviceName: (rawAppointment as any).services?.name || '未知服務',
+    date: rawAppointment.appointment_date,
+    time: rawAppointment.appointment_time,
+    userName: (rawAppointment as any).customers?.name || '未知',
+    status: rawAppointment.status === 'approved' ? '已確認' : rawAppointment.status === 'pending' ? '待確認' : rawAppointment.status === 'cancelled' ? '已取消' : '已完成',
+  } : null;
 
   const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
     已確認: { label: '已確認', variant: 'default' },

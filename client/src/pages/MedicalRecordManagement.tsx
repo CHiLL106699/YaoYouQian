@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { trpc } from "@/lib/trpc";
 import { FileText, Plus, Search, Edit, Trash2, Eye, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useTenant } from "@/contexts/TenantContext";
 
 export default function MedicalRecordManagement() {
   const [keyword, setKeyword] = useState("");
@@ -29,7 +30,7 @@ export default function MedicalRecordManagement() {
     treatmentPlan: "",
     notes: "",
   });
-  const tenantId = 1; // TODO: 從 context 取得
+  const { tenantId } = useTenant();
 
   // 查詢病歷列表
   const recordsQuery = trpc.medicalRecord.list.useQuery({

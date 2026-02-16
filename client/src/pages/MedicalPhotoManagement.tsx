@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { Camera, Upload, Trash2, Eye, RefreshCw, Image, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
+import { useTenant } from "@/contexts/TenantContext";
 
 const photoTypeLabels: Record<string, { label: string; color: string }> = {
   before: { label: "術前", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
@@ -36,7 +37,7 @@ export default function MedicalPhotoManagement() {
     photoCategory: "",
     notes: "",
   });
-  const tenantId = 1; // TODO: 從 context 取得
+  const { tenantId } = useTenant();
 
   // 查詢照片列表
   const photosQuery = trpc.medicalPhoto.list.useQuery({

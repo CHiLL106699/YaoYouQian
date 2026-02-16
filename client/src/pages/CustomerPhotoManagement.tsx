@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { trpc } from "@/lib/trpc";
 import { Camera, Upload, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { useTenant } from "@/contexts/TenantContext";
 
 export default function CustomerPhotoManagement() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
@@ -24,8 +25,8 @@ export default function CustomerPhotoManagement() {
   const [isUploading, setIsUploading] = useState(false);
   const [viewPhoto, setViewPhoto] = useState<string | null>(null);
 
-  // TODO: 從 context 或 URL 取得 tenantId
-  const tenantId = 1;
+  
+  const { tenantId } = useTenant();
 
   // 查詢客戶列表
   const { data: customersData } = trpc.customer.list.useQuery({ tenantId, page: 1, pageSize: 100 });

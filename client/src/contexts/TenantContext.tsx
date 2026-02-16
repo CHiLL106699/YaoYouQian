@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
+import { trpc } from '@/lib/trpc';
 
 interface TenantContextType {
   tenantId: number | null;
@@ -20,9 +21,18 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem('tenantName');
   });
   const [loading, setLoading] = useState(true);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [authEmail, setAuthEmail] = useState<string | null>(null);
 
+  // 使用 tRPC 後端查詢租戶資訊（安全：不直接讀取 tenants 表）
+  const tenantQuery = trpc.tenant.getByAuthUser.useQuery(
+    { authUserId: authUserId!, email: authEmail || undefined },
+    { enabled: !!authUserId && !tenantId }
+  );
+
+  // 取得當前 Supabase Auth User
   useEffect(() => {
-    const fetchCurrentTenant = async () => {
+    const fetchUser = async () => {
       if (tenantId) {
         setLoading(false);
         return;
@@ -30,33 +40,31 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          let { data: tenant } = await supabase
-            .from('tenants')
-            .select('id, name')
-            .eq('auth_user_id', user.id)
-            .single();
-          if (!tenant && user.email) {
-            const { data: tenantByEmail } = await supabase
-              .from('tenants')
-              .select('id, name')
-              .eq('owner_email', user.email)
-              .single();
-            tenant = tenantByEmail;
-          }
-          if (tenant) {
-            setTenantIdState(tenant.id);
-            setTenantName(tenant.name);
-            localStorage.setItem('tenantId', String(tenant.id));
-            localStorage.setItem('tenantName', tenant.name);
-          }
+          setAuthUserId(user.id);
+          setAuthEmail(user.email || null);
+        } else {
+          setLoading(false);
         }
       } catch (error) {
-        console.error('取得租戶資訊失敗:', error);
+        console.error('取得使用者資訊失敗:', error);
+        setLoading(false);
       }
-      setLoading(false);
     };
-    fetchCurrentTenant();
+    fetchUser();
   }, [tenantId]);
+
+  // 當 tRPC 查詢結果返回時更新 context
+  useEffect(() => {
+    if (tenantQuery.data) {
+      setTenantIdState(tenantQuery.data.id);
+      setTenantName(tenantQuery.data.name);
+      localStorage.setItem('tenantId', String(tenantQuery.data.id));
+      localStorage.setItem('tenantName', tenantQuery.data.name);
+      setLoading(false);
+    } else if (tenantQuery.isError || (tenantQuery.isFetched && !tenantQuery.data)) {
+      setLoading(false);
+    }
+  }, [tenantQuery.data, tenantQuery.isError, tenantQuery.isFetched]);
 
   const setTenantId = (id: number) => {
     setTenantIdState(id);

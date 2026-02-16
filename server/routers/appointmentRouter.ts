@@ -5,6 +5,30 @@ import { supabase } from "../supabaseClient";
 
 
 export const appointmentRouter = router({
+  /**
+   * 取得單筆預約詳情（公開 API，供 LIFF 頁面使用）
+   */
+  getById: protectedProcedure
+    .input(z.object({
+      appointmentId: z.number(),
+    }))
+    .query(async ({ input }) => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*, customers(*), services(*)')
+        .eq('id', input.appointmentId)
+        .single();
+
+      if (error || !data) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: '找不到預約資料'
+        });
+      }
+
+      return data;
+    }),
+
   list: protectedProcedure
     .input(z.object({
       tenantId: z.number(),
