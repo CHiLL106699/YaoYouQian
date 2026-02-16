@@ -57,6 +57,11 @@ import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import AftercareContentManagement from "./pages/AftercareContentManagement";
 import LineConfigManagement from "./pages/LineConfigManagement";
 import ServiceManagement from "./pages/ServiceManagement";
+import MedicalRecordManagement from "./pages/MedicalRecordManagement";
+import MedicalPhotoManagement from "./pages/MedicalPhotoManagement";
+import ConsentFormManagement from "./pages/ConsentFormManagement";
+import ReminderSettings from "./pages/ReminderSettings";
+import ReminderHistory from "./pages/ReminderHistory";
 import LiffMemberCenter from "./pages/LiffMemberCenter";
 import LiffCare from "./pages/LiffCare";
 import LiffBookingForm from "./pages/liff/BookingForm";
@@ -131,6 +136,11 @@ function Router() {
       <Route path="/aftercare-content">{() => <DashboardPage component={AftercareContentManagement} />}</Route>
       <Route path="/line-config">{() => <DashboardPage component={LineConfigManagement} />}</Route>
       <Route path="/services">{() => <DashboardPage component={ServiceManagement} />}</Route>
+      <Route path="/medical-records">{() => <DashboardPage component={MedicalRecordManagement} />}</Route>
+      <Route path="/medical-photos">{() => <DashboardPage component={MedicalPhotoManagement} />}</Route>
+      <Route path="/consent-forms">{() => <DashboardPage component={ConsentFormManagement} />}</Route>
+      <Route path="/reminder-settings">{() => <DashboardPage component={ReminderSettings} />}</Route>
+      <Route path="/reminder-history">{() => <DashboardPage component={ReminderHistory} />}</Route>
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

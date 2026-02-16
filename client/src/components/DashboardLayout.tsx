@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, ShoppingBag, Package, Heart, BarChart3, Settings, Ticket, Gift, CreditCard, AlertTriangle, Clock, Scale, Syringe, CheckSquare, RefreshCw, Timer, Crown, FileText, BookOpen, MessageSquare, Tag, Megaphone, Calculator, Wallet, Camera, Palette } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, ShoppingBag, Package, Heart, BarChart3, Settings, Ticket, Gift, CreditCard, AlertTriangle, Clock, Scale, Syringe, CheckSquare, RefreshCw, Timer, Crown, FileText, BookOpen, MessageSquare, Tag, Megaphone, Calculator, Wallet, Camera, Palette, ClipboardList, Image, FileSignature, Bell, History } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -47,6 +47,11 @@ const menuItems = [
   { icon: BookOpen, label: "衛教內容", path: "/aftercare-content", group: "醫療" },
   { icon: Scale, label: "體重追蹤", path: "/weight-tracking-management", group: "醫療" },
   { icon: Syringe, label: "劑量計算", path: "/dose-calculation", group: "醫療" },
+  { icon: ClipboardList, label: "病歷管理", path: "/medical-records", group: "醫療" },
+  { icon: Image, label: "影像病歷", path: "/medical-photos", group: "醫療" },
+  { icon: FileSignature, label: "同意書管理", path: "/consent-forms", group: "醫療" },
+  { icon: Bell, label: "提醒設定", path: "/reminder-settings", group: "管理" },
+  { icon: History, label: "提醒歷史", path: "/reminder-history", group: "管理" },
   { icon: CheckSquare, label: "審核佇列", path: "/approval-queue", group: "管理" },
   { icon: RefreshCw, label: "改期審核", path: "/reschedule-approval", group: "管理" },
   { icon: Timer, label: "時段限制", path: "/slot-limits", group: "管理" },

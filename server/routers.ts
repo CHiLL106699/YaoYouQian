@@ -36,6 +36,10 @@ import { depositRouter } from "./routers/depositRouter";
 import { voucherRouter } from "./routers/voucherRouter";
 import { marketingRouter } from "./routers/marketingRouter";
 import { slotCalculatorRouter } from "./routers/slotCalculatorRouter";
+import { medicalRecordRouter } from "./routers/medicalRecordRouter";
+import { medicalPhotoRouter } from "./routers/medicalPhotoRouter";
+import { consentFormRouter } from "./routers/consentFormRouter";
+import { appointmentReminderRouter } from "./routers/appointmentReminderRouter";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
@@ -92,6 +96,10 @@ export const appRouter = router({
   voucher: voucherRouter,
   marketing: marketingRouter,
   slotCalculator: slotCalculatorRouter,
+  medicalRecord: medicalRecordRouter,
+  medicalPhoto: medicalPhotoRouter,
+  consentForm: consentFormRouter,
+  appointmentReminder: appointmentReminderRouter,
 });
 
 export type AppRouter = typeof appRouter;
