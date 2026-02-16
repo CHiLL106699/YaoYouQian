@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import { Upload, Plus, Edit, Trash2, Power, PowerOff } from 'lucide-react';
-import { storagePut } from '../../../server/storage';
 
 export default function ServiceManagement() {
   const [tenantId] = useState(1); // TODO: 從認證系統取得

@@ -1,12 +1,6 @@
 import { router, protectedProcedure } from "../_core/trpc";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
+import { supabase } from "../supabaseClient";
 export const referralRouter = router({
   list: protectedProcedure
     .input(z.object({ tenantId: z.number(), page: z.number().optional(), pageSize: z.number().optional() }))

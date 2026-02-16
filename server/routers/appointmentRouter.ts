@@ -78,7 +78,7 @@ export const appointmentRouter = router({
         if (customer && customer.line_user_id) {
           const notificationMessage = `您的預約已獲批准！\n預約時間: ${data.appointment_date} ${data.appointment_time}`;
 
-          await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/send-line-notification`, {
+          await fetch(`${process.env.SUPABASE_URL}/functions/v1/send-line-notification`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ export const appointmentRouter = router({
         if (customer && customer.line_user_id) {
           const notificationMessage = `很抱歉，您的預約已被拒絕。\n原因: ${input.reason || '時段已滿'}`;
 
-          await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/send-line-notification`, {
+          await fetch(`${process.env.SUPABASE_URL}/functions/v1/send-line-notification`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
