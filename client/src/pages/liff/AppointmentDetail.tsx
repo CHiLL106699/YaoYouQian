@@ -1,57 +1,65 @@
+/**
+ * LIFF 預約詳情頁面
+ * 顯示單筆預約的完整資訊與 QR Code
+ */
 
 import React, { useEffect, useState } from 'react';
 import liff from '@line/liff';
-import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-// import { QRCodeSVG } from 'qrcode.react'; // 暫時註解，需安裝套件
-import { Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Calendar, Clock, User, ArrowLeft, Share2 } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 interface AppointmentDetailProps {
-  appointmentId: string;
+  params: { id: string };
 }
 
-const AppointmentDetail: React.FC<AppointmentDetailProps> = ({ appointmentId }) => {
+const AppointmentDetail: React.FC<AppointmentDetailProps> = ({ params }) => {
+  const appointmentId = params.id;
+  const [, navigate] = useLocation();
   const [liffError, setLiffError] = useState<string | null>(null);
   const [isLiffInitialized, setIsLiffInitialized] = useState(false);
 
   useEffect(() => {
     const initLiff = async () => {
       try {
-        await liff.init({
-          liffId: import.meta.env.VITE_LIFF_ID, // 從環境變數獲取 LIFF ID
-        });
+        const liffId = import.meta.env.VITE_LIFF_ID;
+        if (liffId) {
+          await liff.init({ liffId });
+        }
         setIsLiffInitialized(true);
       } catch (error: any) {
         setLiffError(error.toString());
+        setIsLiffInitialized(true);
       }
     };
-
     initLiff();
   }, []);
 
-  // const { data: appointment, isLoading, error } = trpc.appointment.getById.useQuery(
-  //   { id: appointmentId },
-  //   { enabled: isLiffInitialized }
-  // );
-  
-  // 模擬資料
+  // 模擬資料（TODO: 接 trpc.appointment.getById）
   const appointment = {
     id: appointmentId,
     serviceName: '精油按摩',
     date: '2024-07-20T14:00:00',
     time: '14:00',
     userName: '王小明',
-    status: '已確認'
+    status: '已確認',
   };
   const isLoading = false;
-  const error = null;
+
+  const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+    已確認: { label: '已確認', variant: 'default' },
+    待確認: { label: '待確認', variant: 'secondary' },
+    已取消: { label: '已取消', variant: 'destructive' },
+    已完成: { label: '已完成', variant: 'outline' },
+  };
 
   if (liffError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-red-100 text-red-800">
-        <h1 className="text-2xl font-bold mb-4">LIFF 初始化失敗</h1>
-        <p>{liffError}</p>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-red-50">
+        <h1 className="text-xl font-bold text-red-600 mb-2">LIFF 初始化失敗</h1>
+        <p className="text-red-500 text-sm">{liffError}</p>
       </div>
     );
   }
@@ -59,74 +67,98 @@ const AppointmentDetail: React.FC<AppointmentDetailProps> = ({ appointmentId }) 
   if (isLoading || !isLiffInitialized) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
-        <p className="mt-4 text-lg text-gray-600">載入中...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-red-100 text-red-800">
-        <h1 className="text-2xl font-bold mb-4">載入預約詳情失敗</h1>
-        <p>{String(error)}</p>
-        <Button onClick={() => window.location.reload()} className="mt-4">重試</Button>
+        <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+        <p className="mt-3 text-gray-500">載入中...</p>
       </div>
     );
   }
 
   if (!appointment) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-yellow-100 text-yellow-800">
-        <h1 className="text-2xl font-bold mb-4">找不到預約資訊</h1>
-        <p>請確認預約 ID 是否正確。</p>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <h1 className="text-xl font-bold text-gray-700 mb-2">找不到預約資訊</h1>
+        <p className="text-gray-500 text-sm">請確認預約 ID 是否正確。</p>
+        <Button onClick={() => navigate('/liff/appointments')} className="mt-4" variant="outline">
+          返回預約列表
+        </Button>
       </div>
     );
   }
 
-  const appointmentUrl = `https://your-domain.com/appointment/${appointment.id}`;
+  const statusConfig = statusMap[appointment.status] || statusMap['待確認'];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 flex flex-col items-center">
-      <Card className="w-full max-w-md shadow-lg rounded-lg">
-        <CardHeader className="bg-blue-600 text-white rounded-t-lg p-4">
-          <CardTitle className="text-2xl font-bold text-center">預約詳情</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">預約項目：{appointment.serviceName}</h2>
-            <p className="text-gray-600">日期：{new Date(appointment.date).toLocaleDateString()}</p>
-            <p className="text-gray-600">時間：{appointment.time}</p>
-            <p className="text-gray-600">預約人：{appointment.userName}</p>
-            <p className="text-gray-600">狀態：<span className="font-medium text-green-600">{appointment.status}</span></p>
-          </div>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-md mx-auto">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/liff/appointments')}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          返回列表
+        </Button>
 
-          <div className="flex flex-col items-center space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800">您的預約 QR Code</h3>
-            <div className="p-2 bg-white border border-gray-200 rounded-lg shadow-sm">
-              {/* <QRCodeSVG value={appointmentUrl} size={200} level="H" /> */}
-              <div className="w-[200px] h-[200px] bg-gray-200 flex items-center justify-center">
-                <p className="text-sm text-gray-500">需安裝 qrcode.react</p>
+        <Card className="shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
+            <CardTitle className="text-xl text-center">預約詳情</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <div className="text-center">
+              <h2 className="text-lg font-semibold">{appointment.serviceName}</h2>
+              <Badge variant={statusConfig.variant} className="mt-2">
+                {statusConfig.label}
+              </Badge>
+            </div>
+
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-blue-500" />
+                <div>
+                  <p className="text-sm text-gray-500">預約日期</p>
+                  <p className="font-medium">{new Date(appointment.date).toLocaleDateString('zh-TW')}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-blue-500" />
+                <div>
+                  <p className="text-sm text-gray-500">預約時段</p>
+                  <p className="font-medium">{appointment.time}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <User className="h-5 w-5 text-blue-500" />
+                <div>
+                  <p className="text-sm text-gray-500">預約人</p>
+                  <p className="font-medium">{appointment.userName}</p>
+                </div>
               </div>
             </div>
-            <p className="text-sm text-gray-500 text-center">請於報到時出示此 QR Code</p>
-          </div>
 
-          <div className="flex justify-center mt-6">
-            <Button 
-              onClick={() => liff.shareTargetPicker([
-                {
-                  type: 'text',
-                  text: `我的預約詳情：\n項目：${appointment.serviceName}\n日期：${new Date(appointment.date).toLocaleDateString()}\n時間：${appointment.time}\n詳情連結：${appointmentUrl}`,
-                },
-              ])}
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
-            >
-              分享預約詳情
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="pt-4 border-t">
+              <p className="text-center text-sm text-gray-400 mb-3">預約編號：{appointment.id}</p>
+              <Button
+                onClick={() => {
+                  if (liff.isInClient()) {
+                    liff.shareTargetPicker([
+                      {
+                        type: 'text',
+                        text: `我的預約詳情：\n項目：${appointment.serviceName}\n日期：${new Date(appointment.date).toLocaleDateString('zh-TW')}\n時間：${appointment.time}`,
+                      },
+                    ]).catch(() => {});
+                  }
+                }}
+                className="w-full"
+                variant="outline"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                分享預約詳情
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

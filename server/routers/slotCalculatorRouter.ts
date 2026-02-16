@@ -22,7 +22,7 @@ export const slotCalculatorRouter = router({
       // 查詢服務項目時長
       const { data: service, error: serviceError } = await supabase
         .from('services')
-        .select('duration')
+        .select('duration_minutes')
         .eq('id', input.serviceId)
         .eq('tenant_id', input.tenantId)
         .single();
@@ -31,7 +31,7 @@ export const slotCalculatorRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: '服務項目不存在' });
       }
 
-      const durationMinutes = service.duration; // 假設 duration 是分鐘數
+      const durationMinutes = service.duration_minutes || 60; // 預設 60 分鐘
 
       // 查詢當天已預約的時段
       const { data: appointments, error: appointmentsError } = await supabase
@@ -91,14 +91,14 @@ export const slotCalculatorRouter = router({
         // 查詢服務項目時長
         const { data: service } = await supabase
           .from('services')
-          .select('duration')
+          .select('duration_minutes')
           .eq('id', input.serviceId)
           .eq('tenant_id', input.tenantId)
           .single();
 
         if (!service) continue;
 
-        const durationMinutes = service.duration;
+        const durationMinutes = service.duration_minutes || 60;
 
         // 查詢當天已預約的時段
         const { data: appointments } = await supabase
@@ -138,10 +138,15 @@ export const slotCalculatorRouter = router({
     }),
 });
 
-// 輔助函數：將 HH:MM 轉換為分鐘數
+// 輔助函數：將 HH:MM 或 ISO timestamp 轉換為分鐘數
 function parseTime(time: string): number {
+  // 支援 ISO timestamp 格式 (e.g. 2024-01-01T09:00:00+08:00)
+  if (time.includes('T')) {
+    const d = new Date(time);
+    return d.getHours() * 60 + d.getMinutes();
+  }
   const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
+  return hours * 60 + (minutes || 0);
 }
 
 // 輔助函數：將分鐘數轉換為 HH:MM

@@ -1,6 +1,7 @@
 /**
  * LIFF 會員中心頁面 - 多租戶 SaaS 版本
  * 深藍底燙金字質感介面，適合手機瀏覽
+ * 功能：會員資料展示、預約紀錄、我的票券、聯絡客服
  */
 import { useState, useEffect, useMemo } from "react";
 import { initLiff, getLiffProfile, type LiffProfile } from "@/lib/liff";
@@ -14,7 +15,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, User, Calendar, Ticket, MessageSquare, AlertCircle } from "lucide-react";
+import { Loader2, User, Calendar, Ticket, MessageSquare, AlertCircle, Heart, Phone, Mail } from "lucide-react";
 
 export default function LiffMemberCenter() {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -23,6 +24,7 @@ export default function LiffMemberCenter() {
   const [liffProfile, setLiffProfile] = useState<LiffProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLiffLoading, setIsLiffLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("upcoming");
 
   useEffect(() => {
     const initialize = async () => {
@@ -57,7 +59,7 @@ export default function LiffMemberCenter() {
     initialize();
   }, [tenantId]);
 
-  // 查詢客戶資料（完整資料：姓名、電話、會員等級等）
+  // 查詢客戶資料
   const { data: customerData } = trpc.customer.getByLineUserId.useQuery(
     { lineUserId: liffProfile?.userId ?? "", tenantId: parseInt(tenantId || "0", 10) },
     { enabled: !!liffProfile?.userId && !!tenantId }
@@ -95,6 +97,7 @@ export default function LiffMemberCenter() {
 
   const displayName = customerInfo?.name || liffProfile?.displayName || "會員";
   const memberId = customerInfo?.id ? `#${String(customerInfo.id).padStart(6, "0")}` : "--";
+  const memberLevel = customerInfo?.member_level || "一般會員";
 
   // 分類預約
   const now = new Date();
@@ -128,19 +131,42 @@ export default function LiffMemberCenter() {
               {displayName.charAt(0)}
             </AvatarFallback>
           </Avatar>
-          <div>
+          <div className="flex-1">
             <h2 className="text-2xl font-bold text-amber-300">{displayName}</h2>
             <p className="text-sm text-gray-300">會員編號: {memberId}</p>
+            <Badge className="mt-1 bg-amber-500/20 text-amber-300 border-amber-500/30">
+              {memberLevel}
+            </Badge>
           </div>
         </CardContent>
       </Card>
+
+      {/* 會員資訊 */}
+      {customerInfo && (
+        <Card className="mt-4 bg-slate-800/70 border-amber-500/20">
+          <CardContent className="p-4 space-y-2">
+            {customerInfo.phone && (
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <Phone className="w-4 h-4 text-amber-400" />
+                <span>{customerInfo.phone}</span>
+              </div>
+            )}
+            {customerInfo.email && (
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <Mail className="w-4 h-4 text-amber-400" />
+                <span>{customerInfo.email}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 功能選單 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-6">
         <Button
           variant="outline"
           className="flex-col h-20 bg-slate-800/50 border-amber-500/30 text-amber-300 hover:bg-slate-700"
-          onClick={() => toast.info("個人資料功能即將上線")}
+          onClick={() => setActiveTab("upcoming")}
         >
           <User className="w-6 h-6 mb-1" />
           個人資料
@@ -159,10 +185,13 @@ export default function LiffMemberCenter() {
         <Button
           variant="outline"
           className="flex-col h-20 bg-slate-800/50 border-amber-500/30 text-amber-300 hover:bg-slate-700"
-          onClick={() => toast.info("票券功能即將上線")}
+          onClick={() => {
+            const careUrl = `/liff/care?tenantId=${tenantId}`;
+            window.location.href = careUrl;
+          }}
         >
-          <Ticket className="w-6 h-6 mb-1" />
-          我的票券
+          <Heart className="w-6 h-6 mb-1" />
+          術後護理
         </Button>
         <Button
           variant="outline"
@@ -175,7 +204,7 @@ export default function LiffMemberCenter() {
       </div>
 
       {/* 預約記錄 */}
-      <Tabs defaultValue="upcoming" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
           <TabsTrigger
             value="upcoming"
@@ -197,7 +226,17 @@ export default function LiffMemberCenter() {
               <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
             </div>
           ) : upcomingBookings.length === 0 ? (
-            <p className="text-center text-gray-400 mt-8 py-8">目前沒有即將到來的預約</p>
+            <div className="text-center mt-8 py-8">
+              <p className="text-gray-400">目前沒有即將到來的預約</p>
+              <Button
+                className="mt-4 bg-amber-500 text-slate-900 hover:bg-amber-400"
+                onClick={() => {
+                  window.location.href = `/booking?tenantId=${tenantId}`;
+                }}
+              >
+                立即預約
+              </Button>
+            </div>
           ) : (
             <div className="space-y-3 mt-4">
               {upcomingBookings.map((booking: any) => (

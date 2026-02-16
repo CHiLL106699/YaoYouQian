@@ -56,8 +56,12 @@ import TimeSlotTemplateManagement from "./pages/TimeSlotTemplateManagement";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import AftercareContentManagement from "./pages/AftercareContentManagement";
 import LineConfigManagement from "./pages/LineConfigManagement";
+import ServiceManagement from "./pages/ServiceManagement";
 import LiffMemberCenter from "./pages/LiffMemberCenter";
 import LiffCare from "./pages/LiffCare";
+import LiffBookingForm from "./pages/liff/BookingForm";
+import LiffMyAppointments from "./pages/liff/MyAppointments";
+import LiffAppointmentDetail from "./pages/liff/AppointmentDetail";
 
 /** Wrap a page component with DashboardLayout + TenantProvider */
 function DashboardPage({ component: Component }: { component: React.ComponentType }) {
@@ -83,6 +87,9 @@ function Router() {
       <Route path="/my-bookings" component={MyBookings} />
       <Route path="/liff/member" component={LiffMemberCenter} />
       <Route path="/liff/care" component={LiffCare} />
+      <Route path="/liff/booking" component={LiffBookingForm} />
+      <Route path="/liff/appointments" component={LiffMyAppointments} />
+      <Route path="/liff/appointment/:id" component={LiffAppointmentDetail} />
 
       {/* === Dashboard routes (DashboardLayout + TenantProvider) === */}
       <Route path="/tenant-dashboard">{() => <DashboardPage component={TenantDashboard} />}</Route>
@@ -123,6 +130,7 @@ function Router() {
       <Route path="/analytics-dashboard">{() => <DashboardPage component={AnalyticsDashboard} />}</Route>
       <Route path="/aftercare-content">{() => <DashboardPage component={AftercareContentManagement} />}</Route>
       <Route path="/line-config">{() => <DashboardPage component={LineConfigManagement} />}</Route>
+      <Route path="/services">{() => <DashboardPage component={ServiceManagement} />}</Route>
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
