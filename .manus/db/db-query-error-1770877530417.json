@@ -1,0 +1,8 @@
+{
+  "query": "INSERT IGNORE INTO tenants (id, name, subdomain, owner_line_user_id, status) \nVALUES (1, '測試租戶', 'test-tenant', 'test-owner-id', 'active');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yhrFTMwYTaZZBj.e200c1c625b3 --database AAVvDnQSgZb2QX3g6gP92w --execute INSERT IGNORE INTO tenants (id, name, subdomain, owner_line_user_id, status) \nVALUES (1, '測試租戶', 'test-tenant', 'test-owner-id', 'active');",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'aavvdnqsgzb2qx3g6gp92w.tenants' doesn't exist"
+  ]
+}

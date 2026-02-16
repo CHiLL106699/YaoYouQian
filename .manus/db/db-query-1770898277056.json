@@ -1,0 +1,15 @@
+{
+  "query": "SELECT COLUMN_NAME, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'tenants' AND COLUMN_NAME = 'owner_line_user_id';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yhrFTMwYTaZZBj.e200c1c625b3 --database AAVvDnQSgZb2QX3g6gP92w --execute SELECT COLUMN_NAME, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'tenants' AND COLUMN_NAME = 'owner_line_user_id';",
+  "rows": [
+    {
+      "COLUMN_NAME": "owner_line_user_id",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tIS_NULLABLE\tCOLUMN_DEFAULT\nowner_line_user_id\tYES\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1711
+}

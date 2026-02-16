@@ -1,0 +1,260 @@
+import { z } from "zod";
+import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
+import { supabase } from "../supabaseClient";
+
+export const tenantRouter = router({
+  /**
+   * 查詢租戶儀表板統計資料
+   */
+  getDashboardStats: protectedProcedure
+    .input(z.object({
+      tenantId: z.number(),
+    }))
+    .query(async ({ input }) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+
+      // 今日預約數
+      const { count: todayApptCount } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', input.tenantId)
+        .gte('appointment_date', today.toISOString())
+        .lt('appointment_date', tomorrow.toISOString());
+
+      // 總客戶數
+      const { count: totalCustCount } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', input.tenantId);
+
+      // 本月新客戶
+      const { count: newCustCount } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', input.tenantId)
+        .gte('created_at', firstDayOfMonth.toISOString())
+        .lte('created_at', lastDayOfMonth.toISOString());
+
+      // 本月營收
+      const { data: revenueData } = await supabase
+        .from('orders')
+        .select('total_amount')
+        .eq('tenant_id', input.tenantId)
+        .eq('status', 'completed')
+        .gte('created_at', firstDayOfMonth.toISOString())
+        .lte('created_at', lastDayOfMonth.toISOString());
+      const monthlyRevenue = (revenueData || []).reduce((sum: number, o: any) => sum + Number(o.total_amount || 0), 0);
+
+      // 待處理訂單
+      const { count: pendingCount } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', input.tenantId)
+        .eq('status', 'pending');
+
+      return {
+        todayAppointments: todayApptCount || 0,
+        todayAppointmentsChange: 0,
+        totalCustomers: totalCustCount || 0,
+        newCustomersThisMonth: newCustCount || 0,
+        monthlyRevenue,
+        revenueGrowth: 0,
+        pendingOrders: pendingCount || 0,
+        pendingOrdersChange: 0,
+      };
+    }),
+
+  /**
+   * 註冊新租戶（公開 API）
+   */
+  register: publicProcedure
+    .input(z.object({
+      companyName: z.string().min(1, "公司名稱不能為空"),
+      contactPerson: z.string().min(1, "聯絡人姓名不能為空"),
+      email: z.string().email("請輸入有效的 Email"),
+      password: z.string().min(8, "密碼至少需要 8 個字元"),
+      subscriptionPlan: z.enum(['basic', 'professional', 'enterprise']),
+    }))
+    .mutation(async ({ input }) => {
+      // 1. 使用 Supabase Auth Admin API 建立使用者帳號（後端）
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: input.email,
+        password: input.password,
+        email_confirm: true, // 自動確認 Email
+        user_metadata: {
+          company_name: input.companyName,
+          contact_person: input.contactPerson,
+          subscription_plan: input.subscriptionPlan,
+        }
+      });
+
+      if (authError || !authData.user) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `建立使用者帳號失敗: ${authError?.message || '未知錯誤'}`
+        });
+      }
+
+      // 2. 建立租戶資料
+      const subdomain = input.companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .insert({
+          name: input.companyName,
+          subdomain: subdomain,
+          status: 'trial',
+          auth_user_id: authData.user.id,
+          owner_email: input.email,
+          owner_name: input.contactPerson,
+        })
+        .select()
+        .single();
+
+      if (tenantError) {
+        // 如果建立租戶失敗，刪除已建立的使用者帳號
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `建立租戶失敗: ${tenantError.message}`
+        });
+      }
+
+      // 3. 建立訂閱記錄
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 14);
+
+      const { error: subscriptionError } = await supabase
+        .from('tenant_subscriptions')
+        .insert({
+          tenant_id: tenant.id,
+          plan: input.subscriptionPlan,
+          status: 'active',
+          current_period_start: new Date().toISOString(),
+          current_period_end: trialEndDate.toISOString(),
+        });
+
+      if (subscriptionError) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `建立訂閱記錄失敗: ${subscriptionError.message}`
+        });
+      }
+
+      // 4. 建立租戶設定
+      await supabase
+        .from('tenant_settings')
+        .insert({
+          tenant_id: tenant.id,
+          primary_color: '#d4af37', // 金色
+        });
+
+      return {
+        success: true,
+        tenantId: tenant.id,
+        subdomain: tenant.subdomain,
+        message: '註冊成功！14 天免費試用期已開通'
+      };
+    }),
+
+  /**
+   * 取得當前租戶資訊
+   */
+  getCurrent: protectedProcedure
+    .input(z.object({
+      tenantId: z.number(),
+    }))
+    .query(async ({ input }) => {
+      const { data: tenant, error } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('id', input.tenantId)
+        .single();
+
+      if (error || !tenant) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: '找不到租戶資料'
+        });
+      }
+
+      return tenant;
+    }),
+
+  /**
+   * 更新租戶資訊
+   */
+  update: protectedProcedure
+    .input(z.object({
+      tenantId: z.number(),
+      name: z.string().optional(),
+      ownerName: z.string().optional(),
+      ownerEmail: z.string().email().optional(),
+      ownerPhone: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { tenantId, ...updateData } = input;
+
+      const { data, error } = await supabase
+        .from('tenants')
+        .update({
+          name: updateData.name,
+        })
+        .eq('id', tenantId)
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `更新租戶資料失敗: ${error.message}`
+        });
+      }
+
+      return { success: true, tenant: data };
+    }),
+
+  /**
+   * 列出所有租戶（僅超級管理員）
+   */
+  list: protectedProcedure
+    .input(z.object({
+      page: z.number().default(1),
+      pageSize: z.number().default(20),
+      search: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      let query = supabase
+        .from('tenants')
+        .select('*, tenant_subscriptions(*)', { count: 'exact' });
+
+      // 搜尋功能
+      if (input.search) {
+        query = query.or(`name.ilike.%${input.search}%,subdomain.ilike.%${input.search}%`);
+      }
+
+      // 分頁
+      const { data: tenants, error, count } = await query
+        .range((input.page - 1) * input.pageSize, input.page * input.pageSize - 1)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `查詢租戶清單失敗: ${error.message}`
+        });
+      }
+
+      return {
+        tenants: tenants || [],
+        total: count || 0,
+        page: input.page,
+        pageSize: input.pageSize,
+      };
+    }),
+});

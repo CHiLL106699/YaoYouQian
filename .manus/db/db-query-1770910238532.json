@@ -1,0 +1,50 @@
+{
+  "query": "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'tenants' ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yhrFTMwYTaZZBj.e200c1c625b3 --database AAVvDnQSgZb2QX3g6gP92w --execute SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'tenants' ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "id",
+      "data_type": "int",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subdomain",
+      "data_type": "varchar",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "owner_line_user_id",
+      "data_type": "varchar",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "status",
+      "data_type": "enum",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "trial_ends_at",
+      "data_type": "timestamp",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp",
+      "is_nullable": "NO"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\tdata_type\tis_nullable\nid\tint\tNO\nname\ttext\tNO\nsubdomain\tvarchar\tNO\nowner_line_user_id\tvarchar\tYES\nstatus\tenum\tNO\ntrial_ends_at\ttimestamp\tYES\ncreated_at\ttimestamp\tNO\nupdated_at\ttimestamp\tNO\n",
+  "stderr": "",
+  "execution_time_ms": 1604
+}

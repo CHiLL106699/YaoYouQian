@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO tenants (name, subdomain, owner_line_user_id, status) \nVALUES ('測試租戶', 'test-tenant', 'test-owner-id', 'active')\nON CONFLICT (id) DO NOTHING;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yhrFTMwYTaZZBj.e200c1c625b3 --database AAVvDnQSgZb2QX3g6gP92w --execute INSERT INTO tenants (name, subdomain, owner_line_user_id, status) \nVALUES ('測試租戶', 'test-tenant', 'test-owner-id', 'active')\nON CONFLICT (id) DO NOTHING;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 3 column 12 near \"CONFLICT (id) DO NOTHING\""
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE tenant_subscriptions MODIFY COLUMN current_period_start TIMESTAMP NULL; ALTER TABLE tenant_subscriptions MODIFY COLUMN current_period_end TIMESTAMP NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yhrFTMwYTaZZBj.e200c1c625b3 --database AAVvDnQSgZb2QX3g6gP92w --execute ALTER TABLE tenant_subscriptions MODIFY COLUMN current_period_start TIMESTAMP NULL; ALTER TABLE tenant_subscriptions MODIFY COLUMN current_period_end TIMESTAMP NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2088
+}

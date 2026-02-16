@@ -1,0 +1,50 @@
+{
+  "query": "SELECT COLUMN_NAME, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'tenant_subscriptions';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yhrFTMwYTaZZBj.e200c1c625b3 --database AAVvDnQSgZb2QX3g6gP92w --execute SELECT COLUMN_NAME, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'tenant_subscriptions';",
+  "rows": [
+    {
+      "COLUMN_NAME": "id",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "tenant_id",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "plan",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "status",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "stripe_customer_id",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "stripe_subscription_id",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "current_period_start",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "current_period_end",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "created_at",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "updated_at",
+      "IS_NULLABLE": "NO"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tIS_NULLABLE\nid\tNO\ntenant_id\tNO\nplan\tNO\nstatus\tNO\nstripe_customer_id\tYES\nstripe_subscription_id\tYES\ncurrent_period_start\tYES\ncurrent_period_end\tYES\ncreated_at\tNO\nupdated_at\tNO\n",
+  "stderr": "",
+  "execution_time_ms": 1520
+}
