@@ -10,6 +10,7 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:e2e": "vitest run -c vitest.config.e2e.ts",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "seed": "tsx scripts/seed-run.ts",
     "start:prod": "NODE_ENV=production node dist/index.js",
