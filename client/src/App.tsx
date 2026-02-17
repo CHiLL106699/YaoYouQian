@@ -95,6 +95,7 @@ import GamificationManagement from "./pages/manage/GamificationManagement";
 import NotificationManagement from "./pages/manage/NotificationManagement";
 import ScheduleManagement from "./pages/manage/ScheduleManagement";
 import ManageReports from "./pages/manage/ManageReports";
+import UpgradePage from "./pages/manage/UpgradePage";
 
 // BI Dashboard & Marketing Automation pages
 import BIDashboard from "./pages/BIDashboard";
@@ -210,6 +211,7 @@ function Router() {
       <Route path="/manage/products">{() => <DashboardPage component={ProductManagement} />}</Route>
       <Route path="/manage/reports">{() => <DashboardPage component={ManageReports} />}</Route>
       <Route path="/manage/settings">{() => <DashboardPage component={TenantSettings} />}</Route>
+      <Route path="/manage/upgrade">{() => <DashboardPage component={UpgradePage} />}</Route>
       {/* === HRM / Payroll routes === */}
       <Route path="/staff">{() => <DashboardPage component={StaffManagement} />}</Route>
       <Route path="/commission-rules">{() => <DashboardPage component={CommissionRules} />}</Route>

@@ -1,0 +1,39 @@
+# ============================================
+# YaoYouQian — Staging Docker Compose
+# ============================================
+# 使用方式：
+#   docker compose -f docker-compose.staging.yml up -d
+# ============================================
+
+version: '3.8'
+
+services:
+  yaoyouqian-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: staging
+    container_name: yyq-staging-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env.staging
+    environment:
+      - NODE_ENV=staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - yyq-staging
+    labels:
+      - "app=yaoyouqian"
+      - "env=staging"
+
+networks:
+  yyq-staging:
+    driver: bridge

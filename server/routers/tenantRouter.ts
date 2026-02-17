@@ -254,6 +254,95 @@ export const tenantRouter = router({
     }),
 
   /**
+   * 查詢升級狀態
+   */
+  getUpgradeStatus: protectedProcedure
+    .input(z.object({
+      tenantId: z.number(),
+    }))
+    .query(async ({ input }) => {
+      const { data: tenant, error } = await supabase
+        .from('tenants')
+        .select('id, name, plan_type, upgrade_status, upgrade_requested_at, enabled_modules, source_product')
+        .eq('id', input.tenantId)
+        .single();
+      if (error || !tenant) {
+        return { planType: 'yyq_basic', upgradeStatus: null, enabledModules: [] };
+      }
+      return {
+        planType: (tenant as any).plan_type || 'yyq_basic',
+        upgradeStatus: (tenant as any).upgrade_status || null,
+        enabledModules: (tenant as any).enabled_modules || [],
+        upgradeRequestedAt: (tenant as any).upgrade_requested_at || null,
+      };
+    }),
+
+  /**
+   * 申請升級到 YOKAGE 高配版
+   * 安全：僅更新自己的租戶，透過後端 service_role 操作
+   */
+  requestUpgrade: protectedProcedure
+    .input(z.object({
+      tenantId: z.number(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      // 1. 檢查是否已有待審核的升級請求
+      const { data: existing } = await supabase
+        .from('upgrade_requests')
+        .select('id, status')
+        .eq('tenant_id', input.tenantId)
+        .eq('status', 'pending')
+        .single();
+      if (existing) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: '已有待審核的升級請求，請等待審核完成'
+        });
+      }
+      // 2. 取得當前方案
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('plan_type')
+        .eq('id', input.tenantId)
+        .single();
+      const currentPlan = (tenant as any)?.plan_type || 'yyq_basic';
+      if (currentPlan === 'yokage_pro') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: '您已經是高配版方案'
+        });
+      }
+      // 3. 建立升級請求
+      const { error: insertError } = await supabase
+        .from('upgrade_requests')
+        .insert({
+          tenant_id: input.tenantId,
+          current_plan: currentPlan,
+          requested_plan: 'yokage_pro',
+          status: 'pending',
+          notes: input.notes || null,
+          source_product: 'yaoyouqian',
+          requested_at: new Date().toISOString(),
+        });
+      if (insertError) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `建立升級請求失敗: ${insertError.message}`
+        });
+      }
+      // 4. 更新租戶升級狀態
+      await supabase
+        .from('tenants')
+        .update({
+          upgrade_status: 'pending',
+          upgrade_requested_at: new Date().toISOString(),
+        })
+        .eq('id', input.tenantId);
+      return { success: true, message: '升級請求已送出，等待審核' };
+    }),
+
+  /**
    * 列出所有租戶（僅超級管理員）
    */
   list: protectedProcedure
