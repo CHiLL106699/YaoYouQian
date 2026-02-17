@@ -19,13 +19,32 @@ export default function ProductManagement() {
   const [editItem, setEditItem] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", price: "", stock: "", category: "general" });
 
-  const { data, isLoading, refetch } = trpc.shop.list.useQuery({ tenantId, page, pageSize: 20 });
+  const { data, isLoading, refetch, error } = trpc.shop.list.useQuery({ tenantId, page, pageSize: 20 });
   const createMut = trpc.shop.create.useMutation({ onSuccess() { toast.success("商品已新增"); setShowCreate(false); resetForm(); refetch(); } });
   const updateMut = trpc.shop.update.useMutation({ onSuccess() { toast.success("商品已更新"); setEditItem(null); refetch(); } });
   const deleteMut = trpc.shop.delete.useMutation({ onSuccess() { toast.success("商品已刪除"); refetch(); } });
 
   const items: any[] = data?.items || [];
   const resetForm = () => setForm({ name: "", description: "", price: "", stock: "", category: "general" });
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="space-y-6">

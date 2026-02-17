@@ -37,7 +37,7 @@ export async function handleWebhookEvents(tenantId: number, events: LineWebhookE
         case "unfollow": await handleUnfollowEvent(tenantId, event); break;
         case "message": await handleMessageEvent(tenantId, event); break;
         case "postback": await handlePostbackEvent(tenantId, event); break;
-        default: console.log(`[Webhook] Unhandled event type: ${event.type}`);
+        default: break;
       }
     } catch (err) {
       console.error(`[Webhook] Error handling ${event.type} for tenant ${tenantId}:`, err);
@@ -452,7 +452,6 @@ async function handlePostbackEvent(tenantId: number, event: LineWebhookEvent): P
       break;
     }
     default:
-      console.log(`[Webhook] Unknown postback action: ${action}`);
   }
 }
 

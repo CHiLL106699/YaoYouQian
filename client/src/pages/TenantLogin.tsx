@@ -82,9 +82,9 @@ const TenantLogin: React.FC = () => {
 
       // 4. 跳轉至管理後台
       setLocation('/tenant-dashboard');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('登入錯誤:', err);
-      setError(err.message || '登入失敗，請稍後再試');
+      setError((err as Error).message || '登入失敗，請稍後再試');
     } finally {
       setLoading(false);
     }

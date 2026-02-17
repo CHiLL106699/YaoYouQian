@@ -43,9 +43,9 @@ export default function LiffLayout({ children, title, showHeader = true }: LiffL
         } else {
           setError('LIFF 初始化失敗');
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         clearTimeout(timeout);
-        setError(e.message);
+        setError((e as Error).message);
       } finally {
         setLoading(false);
       }

@@ -26,7 +26,7 @@ export default function MyBookings() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // 查詢我的預約（TODO: 使用真實的 LINE User ID）
-  const { data: bookings, refetch } = trpc.booking.listByCustomer.useQuery({
+  const { data: bookings, refetch, error } = trpc.booking.listByCustomer.useQuery({
     lineUserId: 'test-user-id',
   });
 
@@ -80,6 +80,25 @@ export default function MyBookings() {
     ['completed', 'cancelled'].includes(b.status) ||
     new Date(b.appointment_date) < new Date()
   ) || [];
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a1929] via-[#0f2942] to-[#1e4976] py-8 px-4">

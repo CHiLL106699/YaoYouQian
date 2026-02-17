@@ -33,9 +33,9 @@ const LinePaySubscription: React.FC = () => {
       setTimeout(() => {
         setLocation('/dashboard');
       }, 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setStatus('error');
-      setErrorMessage(error.message || 'LINE Pay 授權失敗');
+      setErrorMessage((error as Error).message || 'LINE Pay 授權失敗');
     }
   };
 
@@ -45,11 +45,10 @@ const LinePaySubscription: React.FC = () => {
       // 呼叫後端 API 取得 LINE Pay 授權 URL
       // const { authorizationUrl } = await authorizeSubscriptionMutation.mutateAsync({});
       const authorizationUrl = 'https://sandbox-web-pay.line.me/web/payment/wait?transactionId=MOCK_TRANSACTION_ID';
-      console.log('導向 LINE Pay 授權頁面:', authorizationUrl);
       window.location.href = authorizationUrl;
-    } catch (error: any) {
+    } catch (error: unknown) {
       setStatus('error');
-      setErrorMessage(error.message || '無法啟動 LINE Pay 授權流程');
+      setErrorMessage((error as Error).message || '無法啟動 LINE Pay 授權流程');
     }
   };
 

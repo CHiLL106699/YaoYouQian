@@ -51,8 +51,8 @@ function ScheduleContent({ profile, tenantId }: { profile: { displayName: string
       setShowSwapForm(false);
       setSwapDate('');
       setSwapReason('');
-    } catch (e: any) {
-      alert(`申請失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`申請失敗: ${(e as Error).message}`);
     }
   };
 

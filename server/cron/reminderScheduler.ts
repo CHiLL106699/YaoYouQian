@@ -267,7 +267,6 @@ export async function scanAndSendReminders(
     }
   }
 
-  console.log(`[ReminderScheduler] ${reminderType} 提醒完成: sent=${sent}, failed=${failed}, skipped=${skipped}`);
   return { sent, failed, skipped };
 }
 
@@ -275,13 +274,9 @@ export async function scanAndSendReminders(
  * 執行完整的提醒排程（由 cron 呼叫）
  */
 export async function runReminderSchedule(): Promise<void> {
-  console.log("[ReminderScheduler] 開始執行提醒排程...");
 
   const result24h = await scanAndSendReminders(24, "24h");
-  console.log(`[ReminderScheduler] 24h 提醒: ${JSON.stringify(result24h)}`);
 
   const result2h = await scanAndSendReminders(2, "2h");
-  console.log(`[ReminderScheduler] 2h 提醒: ${JSON.stringify(result2h)}`);
 
-  console.log("[ReminderScheduler] 排程執行完畢");
 }

@@ -48,7 +48,7 @@ export default function CampaignTemplateManagement() {
   const [flexButtonUrl, setFlexButtonUrl] = useState('');
 
   // Queries
-  const { data: templates, refetch, isLoading } = trpc.campaignTemplate.list.useQuery(
+  const { data: templates, refetch, isLoading, error } = trpc.campaignTemplate.list.useQuery(
     { tenantId: tenantId! },
     { enabled: !!tenantId }
   );
@@ -390,6 +390,16 @@ export default function CampaignTemplateManagement() {
                 {templates.map((tpl: any) => {
                   const typeInfo = TYPE_MAP[tpl.message_type] || TYPE_MAP.text;
                   const Icon = typeInfo.icon;
+                  if (error) {
+                    return (
+                      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                        <p className="text-destructive">載入資料時發生錯誤</p>
+                        <p className="text-sm text-muted-foreground">{error.message}</p>
+                        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+                      </div>
+                    );
+                  }
+
                   return (
                     <TableRow key={tpl.id}>
                       <TableCell className="font-medium">{tpl.template_name}</TableCell>

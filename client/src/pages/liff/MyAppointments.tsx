@@ -28,8 +28,8 @@ function AppointmentsContent({ profile, tenantId }: { profile: { displayName: st
     try {
       await cancelMutation.mutateAsync({ tenantId, lineUserId: profile.userId, appointmentId: id });
       query.refetch();
-    } catch (e: any) {
-      alert(`取消失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`取消失敗: ${(e as Error).message}`);
     }
   };
 

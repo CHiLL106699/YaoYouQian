@@ -51,8 +51,8 @@ export default function GamificationManagement() {
       campaignsQuery.refetch();
       setShowCreateCampaign(false);
       setNewCampaignName('');
-    } catch (e: any) {
-      alert(`建立失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`建立失敗: ${(e as Error).message}`);
     }
   };
 

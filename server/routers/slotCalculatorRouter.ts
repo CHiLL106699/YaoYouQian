@@ -81,7 +81,7 @@ export const slotCalculatorRouter = router({
       endTime: z.string(), // HH:MM
     }))
     .query(async ({ input }) => {
-      const results: any[] = [];
+      const results: unknown[] = [];
       const start = new Date(input.startDate);
       const end = new Date(input.endDate);
 

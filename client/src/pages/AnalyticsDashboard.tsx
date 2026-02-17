@@ -4,15 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3, TrendingUp, Users, DollarSign } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 export default function AnalyticsDashboard() {
   const { tenantId } = useTenant();
-  const { data: revenueData, isLoading } = trpc.analytics.revenueStats.useQuery({ tenantId });
+  const { data: revenueData, isLoading, error } = trpc.analytics.revenueStats.useQuery({ tenantId });
   const { data: regData } = trpc.analytics.registrationTrend.useQuery({ tenantId });
   const revArr: any[] = Array.isArray(revenueData) ? revenueData : [];
   const regArr: any[] = Array.isArray(regData) ? regData : [];
   const totalRevenue = revArr.reduce((s: number, d: any) => s + (d.totalRevenue || 0), 0);
   const totalOrders = revArr.reduce((s: number, d: any) => s + (d.orderCount || 0), 0);
   const totalReg = regArr.reduce((s: number, d: any) => s + (d.count || 0), 0);
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-destructive">載入資料時發生錯誤</p>
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold flex items-center gap-2"><BarChart3 className="h-6 w-6" />\u6578\u64da\u5206\u6790</h1>

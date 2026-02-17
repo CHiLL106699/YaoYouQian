@@ -45,8 +45,8 @@ function BookingContent({ profile, tenantId }: { profile: { displayName: string;
         customerName: name, customerPhone: phone, notes,
       });
       setStep('done');
-    } catch (e: any) {
-      alert(`預約失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`預約失敗: ${(e as Error).message}`);
     }
   };
 

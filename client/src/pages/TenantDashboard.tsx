@@ -33,8 +33,7 @@ import {
   Timer,
   Crown,
   LayoutTemplate,
-  PieChart
-} from 'lucide-react';
+  PieChart, Loader2} from 'lucide-react';
 
 export default function TenantDashboard() {
   const { tenantId } = useTenant();
@@ -47,7 +46,7 @@ export default function TenantDashboard() {
     );
   }
 
-  const { data: tenant } = trpc.tenant.getCurrent.useQuery({ tenantId });
+  const { data: tenant, isLoading, error } = trpc.tenant.getCurrent.useQuery({ tenantId });
   const { data: subscription } = trpc.subscription.getCurrent.useQuery({ tenantId });
   const { data: dashboardStats } = trpc.tenant.getDashboardStats.useQuery({ tenantId });
 
@@ -111,6 +110,42 @@ export default function TenantDashboard() {
     { title: '時段模板管理', href: '/time-slot-template-management', icon: LayoutTemplate, description: '管理預約時段模板' },
     { title: '數據分析', href: '/analytics-dashboard', icon: PieChart, description: '營運數據分析儀表板' },
   ];
+
+  if (isLoading) {
+
+    return (
+
+      <div className="flex items-center justify-center min-h-[60vh]">
+
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+
+        <span className="ml-2 text-muted-foreground">載入中...</span>
+
+      </div>
+
+    );
+
+  }
+
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a1929] via-[#0f2942] to-[#1e4976]">

@@ -31,7 +31,7 @@ export default function MarketingCampaignManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   // 查詢行銷活動列表
-  const { data: campaignsData, refetch, isLoading } = trpc.marketing.list.useQuery(
+  const { data: campaignsData, refetch, isLoading, error } = trpc.marketing.list.useQuery(
     { tenantId: tenantId!, page, limit: 20 },
     { enabled: !!tenantId }
   );
@@ -303,6 +303,16 @@ export default function MarketingCampaignManagement() {
               ) : (
                 campaignsData.campaigns.map((campaign: any) => {
                   const statusConfig = STATUS_CONFIG[campaign.status] || STATUS_CONFIG.draft;
+                  if (error) {
+                    return (
+                      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                        <p className="text-destructive">載入資料時發生錯誤</p>
+                        <p className="text-sm text-muted-foreground">{error.message}</p>
+                        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+                      </div>
+                    );
+                  }
+
                   return (
                     <TableRow key={campaign.id}>
                       <TableCell className="font-medium">{campaign.campaign_name}</TableCell>

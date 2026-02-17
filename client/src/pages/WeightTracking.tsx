@@ -9,6 +9,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 import { useState } from "react";
 
+import { Loader2 } from "lucide-react";
 export default function WeightTracking() {
   const { tenantId } = useTenant();
   const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +19,7 @@ export default function WeightTracking() {
 
   if (!tenantId) return <div className="container py-8">請先登入</div>;
 
-  const { data: weightData, refetch } = trpc.weightTracking.list.useQuery({ tenantId });
+  const { data: weightData, refetch, isLoading, error } = trpc.weightTracking.list.useQuery({ tenantId });
   
   const createRecord = trpc.weightTracking.create.useMutation({
     onSuccess: () => {
@@ -48,6 +49,42 @@ export default function WeightTracking() {
       }
     });
   };
+
+  if (isLoading) {
+
+    return (
+
+      <div className="flex items-center justify-center min-h-[60vh]">
+
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+
+        <span className="ml-2 text-muted-foreground">載入中...</span>
+
+      </div>
+
+    );
+
+  }
+
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="container py-8">

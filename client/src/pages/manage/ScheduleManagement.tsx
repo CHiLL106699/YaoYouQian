@@ -62,8 +62,8 @@ export default function ScheduleManagement() {
       });
       scheduleQuery.refetch();
       setShowAddForm(false);
-    } catch (e: any) {
-      alert(`新增失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`新增失敗: ${(e as Error).message}`);
     }
   };
 
@@ -72,8 +72,8 @@ export default function ScheduleManagement() {
     try {
       await deleteMutation.mutateAsync({ tenantId: tenantId!, id });
       scheduleQuery.refetch();
-    } catch (e: any) {
-      alert(`刪除失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`刪除失敗: ${(e as Error).message}`);
     }
   };
 

@@ -144,7 +144,6 @@ export const bookingRouter = router({
             appointmentTime: input.timeSlot,
             customerName: input.name,
           });
-          console.log('[LINE] Booking confirmation sent to:', input.lineUserId);
         } catch (error) {
           console.error('[LINE] Failed to send booking confirmation:', error);
           // 不阻斷預約流程，僅記錄錯誤

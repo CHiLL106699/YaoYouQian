@@ -1,40 +1,44 @@
 /**
  * LIFF 術後護理頁面 - 多租戶 SaaS 版本
  * 以 Accordion 方式展示各療程的術後護理須知
+ * 已包裹 LiffLayout 強制 LIFF 認證
  */
-import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Heart, CheckCircle2, XCircle, Loader2, Info } from "lucide-react";
+import LiffLayout from "@/components/LiffLayout";
 
 interface AftercareInstructions {
   dos?: string[];
   donts?: string[];
 }
 
+interface AftercareContent {
+  id: number;
+  treatment_name: string;
+  category?: string | null;
+  description?: string | null;
+  instructions?: string[] | AftercareInstructions | null;
+}
+
 export default function LiffCare() {
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
-  const tenantId = searchParams.get("tenantId");
-
-  const { data: aftercareContents, isLoading, error } = trpc.aftercareContent.list.useQuery(
-    { tenantId: Number(tenantId) },
-    { enabled: !!tenantId && !isNaN(Number(tenantId)) }
+  return (
+    <LiffLayout title="術後護理須知">
+      {({ tenantId }) => <LiffCareContent tenantId={tenantId} />}
+    </LiffLayout>
   );
+}
 
-  if (!tenantId || isNaN(Number(tenantId))) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 to-orange-100 p-4 text-yellow-800">
-        <Info className="h-12 w-12 text-yellow-500" />
-        <p className="mt-4 text-lg font-semibold">無效的頁面連結</p>
-        <p className="text-sm text-gray-600">請確認您是從診所提供的正確連結進入。</p>
-      </div>
-    );
-  }
+function LiffCareContent({ tenantId }: { tenantId: number }) {
+  const { data: aftercareContents, isLoading, error } = trpc.aftercareContent.list.useQuery(
+    { tenantId },
+    { enabled: !!tenantId }
+  );
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-teal-50 to-green-100 p-4 text-gray-600">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-gray-600">
         <Loader2 className="h-12 w-12 animate-spin text-teal-500" />
         <p className="mt-4 text-lg">載入中，請稍候...</p>
       </div>
@@ -43,7 +47,7 @@ export default function LiffCare() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-red-50 to-orange-100 p-4 text-red-600">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-red-600">
         <XCircle className="h-12 w-12 text-red-500" />
         <p className="mt-4 text-lg font-semibold">讀取資料時發生錯誤</p>
         <p className="text-sm text-gray-500">{error.message}</p>
@@ -53,7 +57,7 @@ export default function LiffCare() {
 
   if (!aftercareContents || aftercareContents.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-teal-50 to-green-100 p-4 text-gray-600">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-gray-600">
         <Info className="h-12 w-12 text-teal-500" />
         <p className="mt-4 text-lg">目前沒有可用的術後護理資訊</p>
         <p className="text-sm text-gray-500">請洽詢您的診所服務人員</p>
@@ -61,20 +65,19 @@ export default function LiffCare() {
     );
   }
 
-  // 處理 instructions：可能是 string[] 或 { dos, donts } 格式
-  const parseInstructions = (raw: any): AftercareInstructions => {
+  const parseInstructions = (raw: unknown): AftercareInstructions => {
     if (!raw) return {};
     if (Array.isArray(raw)) {
       return { dos: raw as string[], donts: [] };
     }
-    if (typeof raw === "object" && (raw.dos || raw.donts)) {
+    if (typeof raw === "object" && raw !== null && ("dos" in raw || "donts" in raw)) {
       return raw as AftercareInstructions;
     }
     return {};
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-teal-50 to-green-100 p-4 sm:p-6">
+    <div className="p-4 sm:p-6">
       <header className="mb-6 flex items-center space-x-3">
         <Heart className="h-8 w-8 text-teal-500" />
         <div>
@@ -85,7 +88,7 @@ export default function LiffCare() {
 
       <main>
         <Accordion type="single" collapsible className="w-full space-y-4">
-          {aftercareContents.map((content: any, index: number) => {
+          {aftercareContents.map((content: AftercareContent, index: number) => {
             const instructions = parseInstructions(content.instructions);
             return (
               <AccordionItem value={`item-${index}`} key={content.id} className="border-none">
@@ -133,7 +136,6 @@ export default function LiffCare() {
                         </div>
                       )}
 
-                      {/* 如果 instructions 是純 string[] 格式，直接列出 */}
                       {Array.isArray(content.instructions) && typeof content.instructions[0] === "string" && (
                         <div>
                           <h4 className="font-semibold text-teal-700 mb-2">護理須知</h4>

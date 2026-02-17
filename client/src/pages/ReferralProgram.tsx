@@ -6,11 +6,22 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gift } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 export default function ReferralProgram() {
   const { tenantId } = useTenant();
   const [page] = useState(1);
-  const { data, isLoading } = trpc.referral.list.useQuery({ tenantId, page, pageSize: 20 });
+  const { data, isLoading, error } = trpc.referral.list.useQuery({ tenantId, page, pageSize: 20 });
   const items: any[] = data?.items || [];
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-destructive">載入資料時發生錯誤</p>
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold flex items-center gap-2"><Gift className="h-6 w-6" />\u63a8\u85a6\u8a08\u756b</h1>

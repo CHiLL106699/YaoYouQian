@@ -33,7 +33,7 @@ export default function VoucherManagement() {
   const [redeemCustomerId, setRedeemCustomerId] = useState('');
 
   // 查詢票券列表
-  const { data: vouchersData, refetch, isLoading } = trpc.voucher.list.useQuery(
+  const { data: vouchersData, refetch, isLoading, error } = trpc.voucher.list.useQuery(
     { tenantId: tenantId!, page, limit: 20 },
     { enabled: !!tenantId }
   );
@@ -338,6 +338,16 @@ export default function VoucherManagement() {
               ) : (
                 vouchersData.vouchers.map((voucher: any) => {
                   const status = getVoucherStatus(voucher);
+                  if (error) {
+                    return (
+                      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                        <p className="text-destructive">載入資料時發生錯誤</p>
+                        <p className="text-sm text-muted-foreground">{error.message}</p>
+                        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+                      </div>
+                    );
+                  }
+
                   return (
                     <TableRow key={voucher.id}>
                       <TableCell className="font-mono font-bold">{voucher.voucher_code}</TableCell>

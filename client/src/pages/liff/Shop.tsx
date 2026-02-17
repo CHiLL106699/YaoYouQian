@@ -49,8 +49,8 @@ function ShopContent({ profile, tenantId }: { profile: { displayName: string; us
       });
       setCart([]);
       setView('done');
-    } catch (e: any) {
-      alert(`下單失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`下單失敗: ${(e as Error).message}`);
     }
   };
 

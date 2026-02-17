@@ -44,8 +44,8 @@ function MemberContent({ profile, tenantId }: { profile: { displayName: string; 
       await updateProfileMutation.mutateAsync({ tenantId, lineUserId: profile.userId, ...editForm });
       setEditing(false);
       profileQuery.refetch();
-    } catch (e: any) {
-      alert(`更新失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`更新失敗: ${(e as Error).message}`);
     }
   };
 
@@ -54,8 +54,8 @@ function MemberContent({ profile, tenantId }: { profile: { displayName: string; 
     try {
       await cancelMutation.mutateAsync({ tenantId, lineUserId: profile.userId, appointmentId: id });
       appointmentsQuery.refetch();
-    } catch (e: any) {
-      alert(`取消失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`取消失敗: ${(e as Error).message}`);
     }
   };
 

@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { DollarSign, Plus, Check, X } from "lucide-react";
+import { DollarSign, Plus, Check, X, Loader2} from "lucide-react";
 import { toast } from "sonner";
 import { useTenant } from "@/contexts/TenantContext";
 
@@ -28,7 +28,7 @@ export default function DepositManagement() {
   const { tenantId } = useTenant();
 
   // 查詢客戶列表
-  const { data: customersData } = trpc.customer.list.useQuery({ tenantId, page: 1, pageSize: 100 });
+  const { data: customersData, isLoading, error } = trpc.customer.list.useQuery({ tenantId, page: 1, pageSize: 100 });
   const customers = customersData?.customers || [];
 
   // 查詢訂金列表
@@ -99,6 +99,42 @@ export default function DepositManagement() {
       });
     }
   };
+
+  if (isLoading) {
+
+    return (
+
+      <div className="flex items-center justify-center min-h-[60vh]">
+
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+
+        <span className="ml-2 text-muted-foreground">載入中...</span>
+
+      </div>
+
+    );
+
+  }
+
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a1929] via-[#0f2942] to-[#1e4976] p-6">

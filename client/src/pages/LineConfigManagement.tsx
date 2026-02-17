@@ -14,7 +14,7 @@ export default function LineConfigManagement() {
     botBasicId: "", liffId: "", bookingUrl: "",
   });
 
-  const { data: config, refetch } = trpc.lineConfig.get.useQuery(
+  const { data: config, refetch, error } = trpc.lineConfig.get.useQuery(
     { tenantId: tenantId || 0 },
     { enabled: (tenantId || 0) > 0 }
   );
@@ -51,6 +51,25 @@ export default function LineConfigManagement() {
   const webhookUrl = webhookInfo?.webhookUrl
     ? `${window.location.origin}${webhookInfo.webhookUrl}`
     : "";
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="space-y-6">

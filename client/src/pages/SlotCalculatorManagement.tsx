@@ -23,7 +23,7 @@ export default function SlotCalculatorManagement() {
   const [endTime, setEndTime] = useState('18:00');
 
   // 查詢服務列表
-  const { data: services } = trpc.service.list.useQuery(
+  const { data: services, error } = trpc.service.list.useQuery(
     { tenantId: tenantId! },
     { enabled: !!tenantId }
   );
@@ -70,12 +70,31 @@ export default function SlotCalculatorManagement() {
       });
       setBatchResult(result);
       toast.success(`成功計算 ${result.results.length} 天的可用時段`);
-    } catch (error: any) {
-      toast.error(`時段計算失敗：${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`時段計算失敗：${(error as Error).message}`);
     }
   };
 
   const selectedService = services?.find((s: any) => s.id === Number(serviceId));
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="space-y-6">

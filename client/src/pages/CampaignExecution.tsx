@@ -34,7 +34,7 @@ export default function CampaignExecution() {
   const [executionResult, setExecutionResult] = useState<any>(null);
 
   // Queries
-  const { data: tags } = trpc.smartTag.list.useQuery(
+  const { data: tags, error } = trpc.smartTag.list.useQuery(
     { tenantId: tenantId! },
     { enabled: !!tenantId }
   );
@@ -134,6 +134,16 @@ export default function CampaignExecution() {
             const Icon = s.icon;
             const isActive = currentStep === s.step;
             const isCompleted = currentStep > s.step;
+            if (error) {
+              return (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                  <p className="text-destructive">載入資料時發生錯誤</p>
+                  <p className="text-sm text-muted-foreground">{error.message}</p>
+                  <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+                </div>
+              );
+            }
+
             return (
               <div key={s.step} className="flex items-center">
                 <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${

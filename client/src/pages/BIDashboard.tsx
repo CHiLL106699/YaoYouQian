@@ -22,7 +22,7 @@ export default function BIDashboard() {
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
 
   // KPI 摘要
-  const { data: kpi, isLoading: kpiLoading } = trpc.biDashboard.getKPISummary.useQuery(
+  const { data: kpi, isLoading: kpiLoading, error } = trpc.biDashboard.getKPISummary.useQuery(
     { tenantId: tenantId! },
     { enabled: !!tenantId }
   );
@@ -466,6 +466,16 @@ export default function BIDashboard() {
                               const count = item?.count || 0;
                               const maxCount = Math.max(...appointmentAnalytics.heatmapData.map(d => d.count), 1);
                               const intensity = count / maxCount;
+                              if (error) {
+                                return (
+                                  <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                                    <p className="text-destructive">載入資料時發生錯誤</p>
+                                    <p className="text-sm text-muted-foreground">{error.message}</p>
+                                    <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+                                  </div>
+                                );
+                              }
+
                               return (
                                 <div
                                   key={hour}

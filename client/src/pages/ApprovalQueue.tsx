@@ -18,7 +18,7 @@ export default function ApprovalQueue() {
 
   if (!tenantId) return <div className="container py-8 text-white">載入中...</div>;
 
-  const { data: pendingList, refetch } = trpc.approval.listPending.useQuery({ tenantId });
+  const { data: pendingList, refetch, error } = trpc.approval.listPending.useQuery({ tenantId });
   const items = pendingList || [];
 
   const approveMutation = trpc.approval.approve.useMutation({
@@ -53,6 +53,25 @@ export default function ApprovalQueue() {
     }
     rejectMutation.mutate({ tenantId, approvalId: selectedApprovalId, reviewedBy: 1, reason: rejectReason });
   };
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="container py-8">

@@ -154,8 +154,8 @@ export const campaignExecutionRouter = router({
 
           await sendLineMessage((customer as any).line_user_id, messages);
           sentCount++;
-        } catch (err: any) {
-          errors.push(`${(customer as any).name}: ${err.message}`);
+        } catch (err: unknown) {
+          errors.push(`${(customer as any).name}: ${(err as Error).message}`);
         }
       }
 

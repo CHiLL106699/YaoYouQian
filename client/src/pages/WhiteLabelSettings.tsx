@@ -17,7 +17,7 @@ export default function WhiteLabelSettings() {
   const [isUploading, setIsUploading] = useState(false);
 
   // 載入現有設定
-  const { data: settings } = trpc.whiteLabel.getSettings.useQuery(
+  const { data: settings, error } = trpc.whiteLabel.getSettings.useQuery(
     { tenantId },
     { enabled: !!tenantId }
   );
@@ -66,8 +66,8 @@ export default function WhiteLabelSettings() {
         setIsUploading(false);
       };
       reader.readAsDataURL(file);
-    } catch (error: any) {
-      toast.error(`上傳失敗：${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`上傳失敗：${(error as Error).message}`);
       setIsUploading(false);
     }
   };
@@ -84,6 +84,25 @@ export default function WhiteLabelSettings() {
   if (!tenantId) {
     return <div className="container py-8">載入中...</div>;
   }
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="container py-8 space-y-6">

@@ -14,10 +14,20 @@ const statusMap: Record<string, string> = { pending: "\u5f85\u8655\u7406", paid:
 export default function ShopOrders() {
   const { tenantId } = useTenant();
   const [statusFilter, setStatusFilter] = useState("all");
-  const { data, isLoading, refetch } = trpc.orders.list.useQuery({ tenantId });
+  const { data, isLoading, refetch, error } = trpc.orders.list.useQuery({ tenantId });
   const updateMut = trpc.orders.updateStatus.useMutation({ onSuccess() { toast.success("\u72c0\u614b\u5df2\u66f4\u65b0"); refetch(); } });
   const allItems: any[] = Array.isArray(data) ? data : [];
   const items = statusFilter === "all" ? allItems : allItems.filter((o: any) => o.status === statusFilter);
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-destructive">載入資料時發生錯誤</p>
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

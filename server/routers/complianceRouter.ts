@@ -70,7 +70,7 @@ export const complianceRouter = router({
       description: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const updateData: Record<string, any> = {};
+      const updateData: Record<string, unknown> = {};
       if (input.keyword !== undefined) updateData.keyword = input.keyword;
       if (input.severity !== undefined) updateData.severity = input.severity;
       if (input.regulationReference !== undefined) updateData.regulation_reference = input.regulationReference;

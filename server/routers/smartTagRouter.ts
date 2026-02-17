@@ -83,7 +83,7 @@ export const smartTagRouter = router({
       description: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
+      const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (input.tagName !== undefined) updateData.tag_name = input.tagName;
       if (input.tagCategory !== undefined) updateData.tag_category = input.tagCategory;
       if (input.autoRule !== undefined) updateData.auto_rule = input.autoRule;

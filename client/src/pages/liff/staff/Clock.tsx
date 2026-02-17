@@ -48,8 +48,8 @@ function ClockContent({ profile, tenantId }: { profile: { displayName: string; u
         location: location ? `${location.lat},${location.lng}` : undefined,
       });
       monthRecords.refetch();
-    } catch (e: any) {
-      alert(`打卡失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`打卡失敗: ${(e as Error).message}`);
     }
   };
 
@@ -60,8 +60,8 @@ function ClockContent({ profile, tenantId }: { profile: { displayName: string; u
         location: location ? `${location.lat},${location.lng}` : undefined,
       });
       monthRecords.refetch();
-    } catch (e: any) {
-      alert(`打卡失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`打卡失敗: ${(e as Error).message}`);
     }
   };
 

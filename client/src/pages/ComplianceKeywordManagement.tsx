@@ -31,7 +31,7 @@ export default function ComplianceKeywordManagement() {
   const [description, setDescription] = useState('');
 
   // Queries
-  const { data: keywords, refetch, isLoading } = trpc.compliance.listKeywords.useQuery({});
+  const { data: keywords, refetch, isLoading, error } = trpc.compliance.listKeywords.useQuery({});
 
   // Mutations
   const createMutation = trpc.compliance.createKeyword.useMutation({
@@ -108,6 +108,25 @@ export default function ComplianceKeywordManagement() {
 
   const blockedCount = (keywords || []).filter((k: any) => k.severity === 'blocked').length;
   const warningCount = (keywords || []).filter((k: any) => k.severity === 'warning').length;
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="space-y-6">

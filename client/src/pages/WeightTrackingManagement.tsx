@@ -6,13 +6,14 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Loader2 } from "lucide-react";
 export default function WeightTrackingManagement() {
   const { tenantId } = useTenant();
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
 
   if (!tenantId) return <div className="container py-8">Loading...</div>;
 
-  const { data: recordsData, refetch } = trpc.weightTracking.list.useQuery({ tenantId });
+  const { data: recordsData, refetch, isLoading, error } = trpc.weightTracking.list.useQuery({ tenantId });
   const records = recordsData?.items || [];
 
   const createMutation = trpc.weightTracking.create.useMutation({
@@ -34,6 +35,42 @@ export default function WeightTrackingManagement() {
       toast.error(`刪除失敗: ${error.message}`);
     },
   });
+
+  if (isLoading) {
+
+    return (
+
+      <div className="flex items-center justify-center min-h-[60vh]">
+
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+
+        <span className="ml-2 text-muted-foreground">載入中...</span>
+
+      </div>
+
+    );
+
+  }
+
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="container py-8">

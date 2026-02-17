@@ -100,7 +100,6 @@ export const orderRouter = router({
       if (input.details && input.details.includes('猛健樂')) {
         // This logic might need to be adapted based on the new schema and requirements
         // For now, we assume a separate table 'treatment_plans' exists.
-        console.log('猛健樂 product purchased, creating treatment plan...');
       }
 
       return order;
@@ -154,7 +153,6 @@ export const orderRouter = router({
 
       if (input.notifyCustomer && updatedOrder && updatedOrder.customers?.line_user_id) {
         // await sendOrderStatusUpdate(updatedOrder.customers.line_user_id, updatedOrder.id, input.status);
-        console.log(`TODO: Send LINE notification to ${updatedOrder.customers.line_user_id} for order ${updatedOrder.id} with status ${input.status}`)
       }
 
       return updatedOrder;

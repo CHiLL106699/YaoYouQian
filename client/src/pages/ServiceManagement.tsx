@@ -17,7 +17,7 @@ export default function ServiceManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<any>(null);
 
-  const { data: services, isLoading, refetch } = trpc.service.list.useQuery({ tenantId });
+  const { data: services, isLoading, refetch, error } = trpc.service.list.useQuery({ tenantId });
   const createMutation = trpc.service.create.useMutation({
     onSuccess: () => {
       toast.success('服務項目建立成功');
@@ -103,6 +103,25 @@ export default function ServiceManagement() {
       </div>
     );
   }
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a1929] via-[#0f2942] to-[#1e4976] p-8">

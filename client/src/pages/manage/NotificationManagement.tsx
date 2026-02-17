@@ -43,8 +43,8 @@ export default function NotificationManagement() {
       setTitle(''); setMessage(''); setScheduledAt('');
       historyQuery.refetch();
       setTab('history');
-    } catch (e: any) {
-      alert(`送出失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`送出失敗: ${(e as Error).message}`);
     }
   };
 

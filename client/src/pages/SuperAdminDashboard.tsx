@@ -15,7 +15,7 @@ export default function SuperAdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // 使用 tRPC 查詢租戶列表
-  const { data: tenantsData, isLoading } = trpc.superAdmin.getAllTenants.useQuery({ page: 1, pageSize: 100 });
+  const { data: tenantsData, isLoading, error } = trpc.superAdmin.getAllTenants.useQuery({ page: 1, pageSize: 100 });
   const { data: statsData } = trpc.superAdmin.getStats.useQuery();
 
   const tenants = tenantsData?.tenants || [];
@@ -26,6 +26,25 @@ export default function SuperAdminDashboard() {
     tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (tenant.owner_email && tenant.owner_email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a1929] via-[#0f2942] to-[#1e4976]">

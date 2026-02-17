@@ -51,7 +51,7 @@ export default function SmartTagManagement() {
   const [autoRules, setAutoRules] = useState<AutoRule[]>([]);
 
   // Queries
-  const { data: tags, refetch, isLoading } = trpc.smartTag.list.useQuery(
+  const { data: tags, refetch, isLoading, error } = trpc.smartTag.list.useQuery(
     { tenantId: tenantId! },
     { enabled: !!tenantId }
   );
@@ -279,6 +279,16 @@ export default function SmartTagManagement() {
               <TableBody>
                 {tags.map((tag: any) => {
                   const cat = CATEGORY_MAP[tag.tag_category] || CATEGORY_MAP.custom;
+                  if (error) {
+                    return (
+                      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                        <p className="text-destructive">載入資料時發生錯誤</p>
+                        <p className="text-sm text-muted-foreground">{error.message}</p>
+                        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+                      </div>
+                    );
+                  }
+
                   return (
                     <TableRow key={tag.id}>
                       <TableCell>

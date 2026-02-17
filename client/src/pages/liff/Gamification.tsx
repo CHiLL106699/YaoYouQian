@@ -35,8 +35,8 @@ function GamificationContent({ profile, tenantId }: { profile: { displayName: st
     try {
       const res = await playMutation.mutateAsync({ tenantId, campaignId, lineUserId: profile.userId });
       setResult(res);
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      alert((e as Error).message);
     } finally {
       setIsPlaying(false);
     }

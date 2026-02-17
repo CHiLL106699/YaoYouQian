@@ -34,8 +34,8 @@ function AppointmentsContent({ profile, tenantId }: { profile: { displayName: st
     try {
       await completeMutation.mutateAsync({ appointmentId: id, tenantId });
       query.refetch();
-    } catch (e: any) {
-      alert(`更新失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`更新失敗: ${(e as Error).message}`);
     }
   };
 

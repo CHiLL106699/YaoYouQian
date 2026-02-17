@@ -11,9 +11,19 @@ import { Sparkles, Trash2 } from "lucide-react";
 export default function MemberPromotions() {
   const { tenantId } = useTenant();
   const [page] = useState(1);
-  const { data, isLoading, refetch } = trpc.memberPromo.list.useQuery({ tenantId, page, pageSize: 20 });
+  const { data, isLoading, refetch, error } = trpc.memberPromo.list.useQuery({ tenantId, page, pageSize: 20 });
   const deleteMut = trpc.memberPromo.delete.useMutation({ onSuccess() { toast.success("\u5df2\u522a\u9664"); refetch(); } });
   const items: any[] = data?.items || [];
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-destructive">載入資料時發生錯誤</p>
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold flex items-center gap-2"><Sparkles className="h-6 w-6" />\u6703\u54e1\u4fc3\u92b7</h1>

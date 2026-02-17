@@ -3,7 +3,7 @@
  * LINE Pay 付款整合 + 訂閱管理
  */
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { supabase } from "../supabaseClient";
 
@@ -72,7 +72,7 @@ export const linePayRouter = router({
       };
     }),
 
-  subscribe: publicProcedure
+  subscribe: protectedProcedure
     .input(z.object({ tenantId: z.number(), plan: z.enum(["yyq_basic", "yyq_advanced"]) }))
     .mutation(async ({ input }) => {
       const price = PLAN_PRICES[input.plan] || 999;
@@ -96,7 +96,7 @@ export const linePayRouter = router({
       return { success: true, subscriptionId: data!.id as number, paymentUrl: null as string | null };
     }),
 
-  cancelSubscription: publicProcedure
+  cancelSubscription: protectedProcedure
     .input(z.object({ tenantId: z.number() }))
     .mutation(async ({ input }) => {
       const { error } = await supabase.from("tenant_subscriptions").update({ status: "cancelled" })

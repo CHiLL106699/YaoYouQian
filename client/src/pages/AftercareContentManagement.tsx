@@ -20,7 +20,7 @@ export default function AftercareContentManagement() {
     imageUrl: "",
   });
 
-  const { data: contents, refetch } = trpc.aftercareContent.list.useQuery(
+  const { data: contents, refetch, error } = trpc.aftercareContent.list.useQuery(
     { tenantId },
     { enabled: tenantId > 0 }
   );
@@ -91,6 +91,25 @@ export default function AftercareContentManagement() {
   function removeInstruction(idx: number) {
     setForm({ ...form, instructions: form.instructions.filter((_, i) => i !== idx) });
   }
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="space-y-6">

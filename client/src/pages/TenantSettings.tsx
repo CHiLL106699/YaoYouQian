@@ -10,13 +10,23 @@ import { Settings, Save } from "lucide-react";
 
 export default function TenantSettings() {
   const { tenantId } = useTenant();
-  const { data: tenant, isLoading } = trpc.tenant.getCurrent.useQuery({ tenantId });
+  const { data: tenant, isLoading, error } = trpc.tenant.getCurrent.useQuery({ tenantId });
   const updateMut = trpc.tenant.update.useMutation({ onSuccess() { toast.success("\u8a2d\u5b9a\u5df2\u66f4\u65b0"); } });
   const [form, setForm] = useState({ name: "", ownerName: "", ownerEmail: "", ownerPhone: "" });
   useEffect(() => {
     if (tenant) setForm({ name: tenant.name || "", ownerName: tenant.owner_name || "", ownerEmail: tenant.owner_email || "", ownerPhone: tenant.owner_phone || "" });
   }, [tenant]);
   if (isLoading) return <div className="flex items-center justify-center h-64"><p>\u8f09\u5165\u4e2d...</p></div>;
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-destructive">載入資料時發生錯誤</p>
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

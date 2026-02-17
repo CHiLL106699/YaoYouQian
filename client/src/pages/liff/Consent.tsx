@@ -78,8 +78,8 @@ function ConsentContent({ profile, tenantId }: { profile: { displayName: string;
         signatureData,
       });
       setStep('done');
-    } catch (e: any) {
-      alert(`簽署失敗: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`簽署失敗: ${(e as Error).message}`);
     }
   };
 

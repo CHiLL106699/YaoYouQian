@@ -80,7 +80,7 @@ export default function BookingForm() {
   }, []);
 
   // 動態查詢服務項目列表
-  const { data: serviceList } = trpc.service.list.useQuery(
+  const { data: serviceList, error } = trpc.service.list.useQuery(
     { tenantId, isActive: true },
     { enabled: !!tenantId }
   );
@@ -128,7 +128,6 @@ export default function BookingForm() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tenantId, lineUserId, name, phone, email: email || undefined }),
           });
-          console.log('[LINE Binding] Binding created successfully');
         } catch (error) {
           console.error('[LINE Binding] Failed to create binding:', error);
         }
@@ -189,6 +188,25 @@ export default function BookingForm() {
       </div>
     );
   }
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a1929] via-[#0f2942] to-[#1e4976] p-4 md:p-8">

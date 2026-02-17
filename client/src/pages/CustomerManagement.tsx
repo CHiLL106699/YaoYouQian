@@ -18,7 +18,7 @@ export default function CustomerManagement() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   
-  const { data, isLoading, refetch } = trpc.customer.list.useQuery({ 
+  const { data, isLoading, refetch, error } = trpc.customer.list.useQuery({ 
     tenantId, 
     page, 
     pageSize: 20, 
@@ -83,6 +83,25 @@ export default function CustomerManagement() {
       deleteMut.mutate({ customerId, tenantId });
     }
   };
+  
+  if (error) {
+  
+    return (
+  
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+  
+        <p className="text-destructive">載入資料時發生錯誤</p>
+  
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+  
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+  
+      </div>
+  
+    );
+  
+  }
+
   
   return (
     <div className="space-y-6">

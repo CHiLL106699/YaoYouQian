@@ -19,7 +19,7 @@ export default function TimeSlotTemplateManagement() {
 
   if (!tenantId) return <div className="container py-8 text-white">載入中...</div>;
 
-  const { data, refetch } = trpc.timeSlotTemplate.list.useQuery({ tenantId, page, pageSize: 10 });
+  const { data, refetch, error } = trpc.timeSlotTemplate.list.useQuery({ tenantId, page, pageSize: 10 });
   const items = data?.items || [];
   const total = data?.total || 0;
 
@@ -54,6 +54,25 @@ export default function TimeSlotTemplateManagement() {
   };
 
   const totalPages = Math.ceil(total / 10);
+
+  if (error) {
+
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+
+        <p className="text-destructive">載入資料時發生錯誤</p>
+
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+
+        <Button variant="outline" onClick={() => window.location.reload()}>重試</Button>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
     <div className="container py-8">

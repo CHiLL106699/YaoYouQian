@@ -71,9 +71,9 @@ const TenantRegister: React.FC = () => {
 
       alert(result.message);
       setLocation('/tenant-login');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('註冊錯誤:', error);
-      setErrors({ submit: error.message || '註冊失敗，請稍後再試' });
+      setErrors({ submit: (error as Error).message || '註冊失敗，請稍後再試' });
     }
   };
 
