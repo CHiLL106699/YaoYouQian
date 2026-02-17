@@ -1,7 +1,7 @@
-import { integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, serial } from "drizzle-orm/pg-core";
+import { integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, serial, jsonb } from "drizzle-orm/pg-core";
 
 /**
- * YoCHiLLSAAS - Complete Database Schema (PostgreSQL / Supabase)
+ * YaoYouQian 管理雲 - Complete Database Schema (PostgreSQL / Supabase)
  * 多租戶預約管理系統完整資料表定義
  * 
  * 已從 drizzle-orm/mysql-core 遷移至 drizzle-orm/pg-core
@@ -19,6 +19,16 @@ export const genderEnum = pgEnum("gender", ["male", "female", "other"]);
 export const appointmentStatusEnum = pgEnum("appointment_status", ["pending", "approved", "completed", "cancelled"]);
 export const orderStatusEnum = pgEnum("order_status", ["pending", "paid", "shipped", "completed", "cancelled"]);
 export const approvalStatusEnum = pgEnum("approval_status", ["pending", "approved", "rejected"]);
+
+// ============================================
+// New Enums for Multi-Product SaaS
+// ============================================
+
+export const planTypeEnum = pgEnum("plan_type", ["yokage_starter", "yokage_pro", "yyq_basic", "yyq_advanced"]);
+export const sourceProductEnum = pgEnum("source_product", ["yokage", "yaoyouqian"]);
+export const gamificationTypeEnum = pgEnum("gamification_type", ["ichiban_kuji", "slot_machine"]);
+export const gamificationStatusEnum = pgEnum("gamification_status", ["draft", "active", "ended"]);
+export const prizeStatusEnum = pgEnum("prize_status", ["available", "won", "expired"]);
 
 // ============================================
 // 1. Core User Table (Manus OAuth)
@@ -40,7 +50,7 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 // ============================================
-// 2. Tenants Table (租戶基本資料)
+// 2. Tenants Table (租戶基本資料) — 已擴充
 // ============================================
 
 export const tenants = pgTable("tenants", {
@@ -50,6 +60,10 @@ export const tenants = pgTable("tenants", {
   ownerLineUserId: varchar("owner_line_user_id", { length: 100 }),
   status: varchar("status", { length: 20 }).default("trial").notNull(),
   trialEndsAt: timestamp("trial_ends_at"),
+  // === Sprint 1: Multi-product SaaS fields ===
+  planType: varchar("plan_type", { length: 30 }).default("yyq_basic"),
+  enabledModules: jsonb("enabled_modules").$type<string[]>().default([]),
+  sourceProduct: varchar("source_product", { length: 20 }).default("yaoyouqian"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -152,6 +166,7 @@ export const appointments = pgTable("appointments", {
   tenantId: integer("tenant_id").notNull(),
   customerId: integer("customer_id").notNull(),
   serviceId: integer("service_id"),
+  staffId: integer("staff_id"),
   appointmentDate: timestamp("appointment_date").notNull(),
   appointmentTime: varchar("appointment_time", { length: 10 }).notNull(),
   status: varchar("status", { length: 20 }).default("pending").notNull(),
@@ -338,3 +353,127 @@ export const slotLimits = pgTable("slot_limits", {
 
 export type SlotLimit = typeof slotLimits.$inferSelect;
 export type InsertSlotLimit = typeof slotLimits.$inferInsert;
+
+// ============================================
+// 17. Gamification Campaigns (遊戲化行銷活動)
+// ============================================
+
+export const gamificationCampaigns = pgTable("gamification_campaigns", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  type: varchar("type", { length: 30 }).notNull(), // ichiban_kuji | slot_machine
+  status: varchar("status", { length: 20 }).default("draft").notNull(), // draft | active | ended
+  description: text("description"),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  maxPlaysPerUser: integer("max_plays_per_user").default(1),
+  costPerPlay: integer("cost_per_play").default(0), // 點數消耗
+  imageUrl: text("image_url"),
+  settings: jsonb("settings").$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type GamificationCampaign = typeof gamificationCampaigns.$inferSelect;
+export type InsertGamificationCampaign = typeof gamificationCampaigns.$inferInsert;
+
+// ============================================
+// 18. Gamification Prizes (獎品設定)
+// ============================================
+
+export const gamificationPrizes = pgTable("gamification_prizes", {
+  id: serial("id").primaryKey(),
+  campaignId: integer("campaign_id").notNull(),
+  tenantId: integer("tenant_id").notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  probability: decimal("probability", { precision: 5, scale: 4 }).notNull(), // 0.0000 ~ 1.0000
+  totalQuantity: integer("total_quantity").notNull(),
+  remainingQuantity: integer("remaining_quantity").notNull(),
+  prizeType: varchar("prize_type", { length: 50 }).default("physical"), // physical | coupon | points
+  prizeValue: text("prize_value"), // JSON: coupon ID, points amount, etc.
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type GamificationPrize = typeof gamificationPrizes.$inferSelect;
+export type InsertGamificationPrize = typeof gamificationPrizes.$inferInsert;
+
+// ============================================
+// 19. Gamification Play Records (遊戲記錄)
+// ============================================
+
+export const gamificationPlays = pgTable("gamification_plays", {
+  id: serial("id").primaryKey(),
+  campaignId: integer("campaign_id").notNull(),
+  tenantId: integer("tenant_id").notNull(),
+  customerId: integer("customer_id"),
+  lineUserId: varchar("line_user_id", { length: 100 }),
+  prizeId: integer("prize_id"),
+  isWin: boolean("is_win").default(false).notNull(),
+  playedAt: timestamp("played_at").defaultNow().notNull(),
+});
+
+export type GamificationPlay = typeof gamificationPlays.$inferSelect;
+export type InsertGamificationPlay = typeof gamificationPlays.$inferInsert;
+
+// ============================================
+// 20. Staff Schedules (員工班表)
+// ============================================
+
+export const staffSchedules = pgTable("staff_schedules", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
+  staffId: integer("staff_id").notNull(),
+  date: varchar("date", { length: 20 }).notNull(),
+  startTime: varchar("start_time", { length: 10 }).notNull(),
+  endTime: varchar("end_time", { length: 10 }).notNull(),
+  shiftType: varchar("shift_type", { length: 30 }).default("normal"), // normal | overtime | off
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type StaffSchedule = typeof staffSchedules.$inferSelect;
+export type InsertStaffSchedule = typeof staffSchedules.$inferInsert;
+
+// ============================================
+// 21. Clock Records (打卡記錄)
+// ============================================
+
+export const clockRecords = pgTable("clock_records", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
+  staffId: integer("staff_id").notNull(),
+  clockIn: timestamp("clock_in"),
+  clockOut: timestamp("clock_out"),
+  date: varchar("date", { length: 20 }).notNull(),
+  location: text("location"), // GPS or address
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ClockRecord = typeof clockRecords.$inferSelect;
+export type InsertClockRecord = typeof clockRecords.$inferInsert;
+
+// ============================================
+// 22. Notifications (通知記錄)
+// ============================================
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
+  targetType: varchar("target_type", { length: 30 }).notNull(), // customer | staff | all
+  targetId: integer("target_id"),
+  title: varchar("title", { length: 200 }).notNull(),
+  content: text("content").notNull(),
+  channel: varchar("channel", { length: 30 }).default("line"), // line | sms | email | push
+  status: varchar("status", { length: 20 }).default("pending"), // pending | sent | failed
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

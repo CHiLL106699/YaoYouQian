@@ -76,6 +76,24 @@ import LiffBookingForm from "./pages/liff/BookingForm";
 import LiffMyAppointments from "./pages/liff/MyAppointments";
 import LiffAppointmentDetail from "./pages/liff/AppointmentDetail";
 
+// === YaoYouQian Sprint 1: New LIFF Client Pages ===
+import LiffShop from "./pages/liff/Shop";
+import LiffNews from "./pages/liff/News";
+import LiffConsent from "./pages/liff/Consent";
+import LiffGamification from "./pages/liff/Gamification";
+
+// === YaoYouQian Sprint 1: LIFF Staff Pages ===
+import LiffStaffClock from "./pages/liff/staff/Clock";
+import LiffStaffSchedule from "./pages/liff/staff/Schedule";
+import LiffStaffAppointments from "./pages/liff/staff/Appointments";
+import LiffStaffCustomers from "./pages/liff/staff/Customers";
+import LiffStaffPerformance from "./pages/liff/staff/Performance";
+
+// === YaoYouQian Sprint 1: Manage (Admin) Pages ===
+import GamificationManagement from "./pages/manage/GamificationManagement";
+import NotificationManagement from "./pages/manage/NotificationManagement";
+import ScheduleManagement from "./pages/manage/ScheduleManagement";
+
 // BI Dashboard & Marketing Automation pages
 import BIDashboard from "./pages/BIDashboard";
 import SmartTagManagement from "./pages/SmartTagManagement";
@@ -110,6 +128,17 @@ function Router() {
       <Route path="/liff/booking" component={LiffBookingForm} />
       <Route path="/liff/appointments" component={LiffMyAppointments} />
       <Route path="/liff/appointment/:id" component={LiffAppointmentDetail} />
+      {/* === YaoYouQian Sprint 1: New LIFF Client Routes === */}
+      <Route path="/liff/shop" component={LiffShop} />
+      <Route path="/liff/news" component={LiffNews} />
+      <Route path="/liff/consent" component={LiffConsent} />
+      <Route path="/liff/gamification" component={LiffGamification} />
+      {/* === YaoYouQian Sprint 1: LIFF Staff Routes === */}
+      <Route path="/liff/staff/clock" component={LiffStaffClock} />
+      <Route path="/liff/staff/schedule" component={LiffStaffSchedule} />
+      <Route path="/liff/staff/appointments" component={LiffStaffAppointments} />
+      <Route path="/liff/staff/customers" component={LiffStaffCustomers} />
+      <Route path="/liff/staff/performance" component={LiffStaffPerformance} />
 
       {/* === Dashboard routes (DashboardLayout + TenantProvider) === */}
       <Route path="/tenant-dashboard">{() => <DashboardPage component={TenantDashboard} />}</Route>
@@ -166,6 +195,15 @@ function Router() {
       <Route path="/campaign-execution">{() => <DashboardPage component={CampaignExecution} />}</Route>
       <Route path="/compliance-keywords">{() => <DashboardPage component={ComplianceKeywordManagement} />}</Route>
 
+      {/* === YaoYouQian Sprint 1: Manage Routes === */}
+      <Route path="/manage">{() => <DashboardPage component={TenantDashboard} />}</Route>
+      <Route path="/manage/appointments">{() => <DashboardPage component={AppointmentManagement} />}</Route>
+      <Route path="/manage/customers">{() => <DashboardPage component={CustomerManagement} />}</Route>
+      <Route path="/manage/staff">{() => <DashboardPage component={StaffManagement} />}</Route>
+      <Route path="/manage/schedule">{() => <DashboardPage component={ScheduleManagement} />}</Route>
+      <Route path="/manage/notifications">{() => <DashboardPage component={NotificationManagement} />}</Route>
+      <Route path="/manage/gamification">{() => <DashboardPage component={GamificationManagement} />}</Route>
+      <Route path="/manage/settings">{() => <DashboardPage component={TenantSettings} />}</Route>
       {/* === HRM / Payroll routes === */}
       <Route path="/staff">{() => <DashboardPage component={StaffManagement} />}</Route>
       <Route path="/commission-rules">{() => <DashboardPage component={CommissionRules} />}</Route>

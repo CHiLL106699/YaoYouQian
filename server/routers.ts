@@ -1,12 +1,32 @@
+/**
+ * YaoYouQian 管理雲 — tRPC Router 三層架構
+ *
+ * Layer 1: coreRouter (共用) — YOKAGE & YaoYouQian 皆可使用
+ * Layer 2: lineRouter (YaoYouQian 強化) — LIFF 專用 API
+ * Layer 3: appRouter (根路由) — 組合 coreRouter + lineRouter + system
+ */
 import { COOKIE_NAME } from "@shared/const";
+import { getSessionCookieOptions } from "./_core/cookies";
+import { systemRouter } from "./_core/systemRouter";
+import { publicProcedure, router } from "./_core/trpc";
+
+// === coreRouter imports ===
 import { tenantRouter } from "./routers/tenantRouter";
 import { appointmentRouter } from "./routers/appointmentRouter";
+import { customerRouter } from "./routers/customerRouter";
+import { staffRouter } from "./routers/staffRouter";
+import { scheduleRouter } from "./routers/scheduleRouter";
+import { clockRouter } from "./routers/clockRouter";
+import { notificationRouter } from "./routers/notificationRouter";
+import { authRouter } from "./routers/authRouter";
+import { lineWebhookTrpcRouter } from "./routers/lineWebhookTrpcRouter";
+import { gamificationRouter } from "./routers/gamificationRouter";
 import { subscriptionRouter } from "./routers/subscriptionRouter";
 import { whiteLabelRouter } from "./routers/whiteLabelRouter";
 import { slotLimitRouter } from "./routers/slotLimitRouter";
 import { rescheduleRouter } from "./routers/rescheduleRouter";
-import { customerRouter } from "./routers/customerRouter";
 import { superAdminRouter } from "./routers/superAdminRouter";
+import { serviceRouter } from "./routers/serviceRouter";
 import { bookingRouter } from "./routers/bookingRouter";
 import { weightTrackingRouter } from "./routers/weightTrackingRouter";
 import { shopRouter } from "./routers/shopRouter";
@@ -21,7 +41,6 @@ import { errorLogRouter } from "./routers/errorLogRouter";
 import { timeSlotTemplateRouter } from "./routers/timeSlotTemplateRouter";
 import { transferRouter } from "./routers/transferRouter";
 import { orderRouter } from "./routers/orderRouter";
-import { serviceRouter } from "./routers/serviceRouter";
 import { lineBindingRouter } from "./routers/lineBindingRouter";
 import { doseCalculationRouter } from "./routers/doseCalculationRouter";
 import { approvalRouter } from "./routers/approvalRouter";
@@ -45,41 +64,42 @@ import { smartTagRouter } from "./routers/smartTagRouter";
 import { campaignTemplateRouter } from "./routers/campaignTemplateRouter";
 import { complianceRouter } from "./routers/complianceRouter";
 import { campaignExecutionRouter } from "./routers/campaignExecutionRouter";
-import { staffRouter } from "./routers/staffRouter";
 import { commissionRuleRouter } from "./routers/commissionRuleRouter";
 import { commissionRecordRouter } from "./routers/commissionRecordRouter";
 import { inventoryRouter } from "./routers/inventoryRouter";
 import { serviceMaterialRouter } from "./routers/serviceMaterialRouter";
 import { inventoryTransactionRouter } from "./routers/inventoryTransactionRouter";
-import { getSessionCookieOptions } from "./_core/cookies";
-import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
 
-export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
-  system: systemRouter,
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
+// === lineRouter imports (YaoYouQian 強化) ===
+import { liffAuthRouter } from "./routers/liffAuthRouter";
+import { linePayRouter } from "./routers/linePayRouter";
+import { liffBookingRouter } from "./routers/liffBookingRouter";
+import { liffShopRouter } from "./routers/liffShopRouter";
+import { liffMemberRouter } from "./routers/liffMemberRouter";
 
-  // Feature routers
-  tenant: tenantRouter,
+// ============================================
+// Layer 1: coreRouter (共用核心)
+// ============================================
+export const coreRouter = router({
+  // Core business modules
   appointment: appointmentRouter,
+  customer: customerRouter,
+  staff: staffRouter,
+  schedule: scheduleRouter,
+  clock: clockRouter,
+  notification: notificationRouter,
+  tenant: tenantRouter,
+  auth: authRouter,
+  lineWebhook: lineWebhookTrpcRouter,
+  gamification: gamificationRouter,
+
+  // Extended business modules
   subscription: subscriptionRouter,
   whiteLabel: whiteLabelRouter,
   slotLimit: slotLimitRouter,
   reschedule: rescheduleRouter,
-  customer: customerRouter,
   superAdmin: superAdminRouter,
   service: serviceRouter,
-  lineBinding: lineBindingRouter,
   booking: bookingRouter,
   weightTracking: weightTrackingRouter,
   shop: shopRouter,
@@ -94,6 +114,7 @@ export const appRouter = router({
   timeSlotTemplate: timeSlotTemplateRouter,
   transfer: transferRouter,
   orders: orderRouter,
+  lineBinding: lineBindingRouter,
   doseCalculation: doseCalculationRouter,
   approval: approvalRouter,
   rescheduleApproval: rescheduleApprovalRouter,
@@ -118,7 +139,6 @@ export const appRouter = router({
   campaignExecution: campaignExecutionRouter,
 
   // HRM/Payroll Module
-  staff: staffRouter,
   commissionRule: commissionRuleRouter,
   commissionRecord: commissionRecordRouter,
 
@@ -126,6 +146,31 @@ export const appRouter = router({
   inventory: inventoryRouter,
   serviceMaterial: serviceMaterialRouter,
   inventoryTransaction: inventoryTransactionRouter,
+});
+
+// ============================================
+// Layer 2: lineRouter (YaoYouQian 強化)
+// ============================================
+export const lineRouter = router({
+  liffAuth: liffAuthRouter,
+  linePay: linePayRouter,
+  liffBooking: liffBookingRouter,
+  liffShop: liffShopRouter,
+  liffMember: liffMemberRouter,
+});
+
+// ============================================
+// Layer 3: appRouter (根路由)
+// ============================================
+export const appRouter = router({
+  system: systemRouter,
+
+  // Flatten coreRouter into root for backward compatibility
+  // This ensures existing API paths like trpc.appointment.xxx still work
+  ...coreRouter._def.procedures,
+
+  // lineRouter namespaced under 'line'
+  line: lineRouter,
 });
 
 export type AppRouter = typeof appRouter;
