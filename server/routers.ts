@@ -26,6 +26,7 @@ import { whiteLabelRouter } from "./routers/whiteLabelRouter";
 import { slotLimitRouter } from "./routers/slotLimitRouter";
 import { rescheduleRouter } from "./routers/rescheduleRouter";
 import { superAdminRouter } from "./routers/superAdminRouter";
+import { upgradeRouter } from "./routers/upgradeRouter";
 import { serviceRouter } from "./routers/serviceRouter";
 import { bookingRouter } from "./routers/bookingRouter";
 import { weightTrackingRouter } from "./routers/weightTrackingRouter";
@@ -146,6 +147,8 @@ export const coreRouter = router({
   inventory: inventoryRouter,
   serviceMaterial: serviceMaterialRouter,
   inventoryTransaction: inventoryTransactionRouter,
+  // Sprint 4: 產品線升級
+  upgrade: upgradeRouter,
 });
 
 // ============================================
