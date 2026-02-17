@@ -1,233 +1,175 @@
 /**
- * 管理後台 - 排班管理
- * 員工排班日曆
+ * 排班管理 — 週視圖、拖曳排班
  */
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { Calendar, ChevronLeft, ChevronRight, Plus, Users, Clock } from "lucide-react";
-
-interface StaffMember {
-  id: number;
-  name: string;
-  role: string;
-}
-
-interface Shift {
-  staffId: number;
-  date: string;
-  startTime: string;
-  endTime: string;
-  shiftType: "normal" | "overtime" | "off";
-}
-
-const MOCK_STAFF: StaffMember[] = [
-  { id: 1, name: "王醫師", role: "醫師" },
-  { id: 2, name: "李護理師", role: "護理師" },
-  { id: 3, name: "張美容師", role: "美容師" },
-  { id: 4, name: "陳諮詢師", role: "諮詢師" },
-];
-
-const MOCK_SHIFTS: Shift[] = [
-  { staffId: 1, date: "2026-02-17", startTime: "09:00", endTime: "18:00", shiftType: "normal" },
-  { staffId: 1, date: "2026-02-18", startTime: "09:00", endTime: "18:00", shiftType: "normal" },
-  { staffId: 1, date: "2026-02-19", startTime: "09:00", endTime: "21:00", shiftType: "overtime" },
-  { staffId: 2, date: "2026-02-17", startTime: "08:00", endTime: "17:00", shiftType: "normal" },
-  { staffId: 2, date: "2026-02-18", startTime: "08:00", endTime: "17:00", shiftType: "normal" },
-  { staffId: 3, date: "2026-02-17", startTime: "10:00", endTime: "19:00", shiftType: "normal" },
-  { staffId: 3, date: "2026-02-19", startTime: "10:00", endTime: "19:00", shiftType: "normal" },
-  { staffId: 4, date: "2026-02-17", startTime: "09:00", endTime: "18:00", shiftType: "normal" },
-];
-
-const SHIFT_COLORS = {
-  normal: "bg-blue-100 text-blue-700 border-blue-200",
-  overtime: "bg-orange-100 text-orange-700 border-orange-200",
-  off: "bg-gray-100 text-gray-500 border-gray-200",
-};
-
-const WEEKDAYS = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { trpc } from '@/lib/trpc';
+import { useTenant } from '@/contexts/TenantContext';
+import { Loader2, ChevronLeft, ChevronRight, Plus, X, Clock, User } from 'lucide-react';
 
 export default function ScheduleManagement() {
-  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+  const { tenantId } = useTenant();
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addDate, setAddDate] = useState('');
+  const [addStaffId, setAddStaffId] = useState('');
+  const [addStart, setAddStart] = useState('09:00');
+  const [addEnd, setAddEnd] = useState('18:00');
+
+  const getWeekRange = (offset: number) => {
     const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(now.setDate(diff));
-  });
-  const [selectedStaff, setSelectedStaff] = useState<string>("all");
-  const [showDialog, setShowDialog] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
-
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(currentWeekStart);
-    d.setDate(d.getDate() + i);
-    return d;
-  });
-
-  const prevWeek = () => {
-    const d = new Date(currentWeekStart);
-    d.setDate(d.getDate() - 7);
-    setCurrentWeekStart(d);
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay() + 1 + offset * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
   };
 
-  const nextWeek = () => {
-    const d = new Date(currentWeekStart);
-    d.setDate(d.getDate() + 7);
-    setCurrentWeekStart(d);
+  const range = getWeekRange(weekOffset);
+  const scheduleQuery = trpc.schedule.listSchedules.useQuery(
+    { tenantId: tenantId!, startDate: range.startDate, endDate: range.endDate },
+    { enabled: !!tenantId }
+  );
+  const staffQuery = trpc.staff.list.useQuery(
+    { tenantId: tenantId! },
+    { enabled: !!tenantId }
+  );
+  const addMutation = trpc.schedule.createSchedule.useMutation();
+  const deleteMutation = trpc.schedule.deleteSchedule.useMutation();
+
+  const schedules = (scheduleQuery.data || []) as any[];
+  const staffList = (staffQuery.data as any)?.staff || staffQuery.data || [];
+  const dayNames = ['一', '二', '三', '四', '五', '六', '日'];
+
+  const getDaysInWeek = () => {
+    const start = new Date(range.startDate);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d.toISOString().split('T')[0];
+    });
   };
 
-  const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const handleAdd = async () => {
+    if (!addDate || !addStaffId) return;
+    try {
+      await addMutation.mutateAsync({
+        tenantId: tenantId!, staffId: parseInt(addStaffId), date: addDate,
+        startTime: addStart, endTime: addEnd, shiftType: 'normal' as const,
+      });
+      scheduleQuery.refetch();
+      setShowAddForm(false);
+    } catch (e: any) {
+      alert(`新增失敗: ${e.message}`);
+    }
+  };
 
-  const getShiftsForCell = (staffId: number, date: string) =>
-    MOCK_SHIFTS.filter(s => s.staffId === staffId && s.date === date);
+  const handleDelete = async (id: number) => {
+    if (!confirm('確定刪除此班次？')) return;
+    try {
+      await deleteMutation.mutateAsync({ tenantId: tenantId!, id });
+      scheduleQuery.refetch();
+    } catch (e: any) {
+      alert(`刪除失敗: ${e.message}`);
+    }
+  };
 
-  const filteredStaff = selectedStaff === "all" ? MOCK_STAFF : MOCK_STAFF.filter(s => s.id.toString() === selectedStaff);
-
-  const weekLabel = `${formatDate(weekDates[0])} ~ ${formatDate(weekDates[6])}`;
+  const days = getDaysInWeek();
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-6 w-6 text-indigo-600" />
-          <h1 className="text-2xl font-bold">排班管理</h1>
-        </div>
-        <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => setShowDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" /> 新增排班
+        <h1 className="text-2xl font-bold">排班管理</h1>
+        <Button className="bg-[#06C755] hover:bg-[#05a847] text-white" onClick={() => setShowAddForm(!showAddForm)}>
+          <Plus className="h-4 w-4 mr-1" /> 新增班次
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="篩選員工" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部員工</SelectItem>
-            {MOCK_STAFF.map(s => (
-              <SelectItem key={s.id} value={s.id.toString()}>{s.name} ({s.role})</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={prevWeek}><ChevronLeft className="h-4 w-4" /></Button>
-          <span className="text-sm font-medium min-w-[200px] text-center">{weekLabel}</span>
-          <Button variant="outline" size="sm" onClick={nextWeek}><ChevronRight className="h-4 w-4" /></Button>
-        </div>
+      {/* Week Navigation */}
+      <div className="flex items-center justify-center gap-4">
+        <Button variant="ghost" size="sm" onClick={() => setWeekOffset(w => w - 1)}><ChevronLeft className="h-4 w-4" /></Button>
+        <span className="font-medium">{range.startDate} ~ {range.endDate}</span>
+        <Button variant="ghost" size="sm" onClick={() => setWeekOffset(w => w + 1)}><ChevronRight className="h-4 w-4" /></Button>
+        <Button variant="outline" size="sm" onClick={() => setWeekOffset(0)}>本週</Button>
       </div>
 
-      {/* Legend */}
-      <div className="flex gap-4">
-        <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-100 border border-blue-200" /><span className="text-sm text-gray-600">正常</span></div>
-        <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-orange-100 border border-orange-200" /><span className="text-sm text-gray-600">加班</span></div>
-        <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-gray-100 border border-gray-200" /><span className="text-sm text-gray-600">休假</span></div>
-      </div>
-
-      {/* Schedule Grid */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="p-3 text-left text-sm font-medium text-gray-600 w-32">
-                  <Users className="h-4 w-4 inline mr-1" /> 員工
-                </th>
-                {weekDates.map((date, i) => (
-                  <th key={i} className="p-3 text-center text-sm font-medium text-gray-600 min-w-[120px]">
-                    <div>{WEEKDAYS[i]}</div>
-                    <div className="text-xs text-gray-400">{date.getMonth() + 1}/{date.getDate()}</div>
-                  </th>
+      {/* Add Form */}
+      {showAddForm && (
+        <Card className="border-[#06C755]">
+          <CardContent className="p-4 grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
+            <div>
+              <label className="text-xs text-gray-500">日期</label>
+              <Input type="date" value={addDate} onChange={e => setAddDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">員工</label>
+              <select className="w-full border rounded-md p-2 text-sm" value={addStaffId} onChange={e => setAddStaffId(e.target.value)}>
+                <option value="">選擇員工</option>
+                {(staffList as any[]).map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name || s.display_name}</option>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStaff.map(staff => (
-                <tr key={staff.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">
-                    <div className="font-medium text-sm">{staff.name}</div>
-                    <div className="text-xs text-gray-500">{staff.role}</div>
-                  </td>
-                  {weekDates.map((date, i) => {
-                    const dateStr = formatDate(date);
-                    const shifts = getShiftsForCell(staff.id, dateStr);
-                    return (
-                      <td
-                        key={i}
-                        className="p-2 text-center cursor-pointer hover:bg-indigo-50 transition-colors"
-                        onClick={() => { setSelectedDate(dateStr); setShowDialog(true); }}
-                      >
-                        {shifts.map((shift, si) => (
-                          <div key={si} className={`rounded px-2 py-1 text-xs border ${SHIFT_COLORS[shift.shiftType]} mb-1`}>
-                            <Clock className="h-3 w-3 inline mr-0.5" />
-                            {shift.startTime}-{shift.endTime}
-                          </div>
-                        ))}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">開始</label>
+              <Input type="time" value={addStart} onChange={e => setAddStart(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">結束</label>
+              <Input type="time" value={addEnd} onChange={e => setAddEnd(e.target.value)} />
+            </div>
+            <Button className="bg-[#06C755] hover:bg-[#05a847] text-white" disabled={addMutation.isPending} onClick={handleAdd}>
+              {addMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : '確認新增'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Add Shift Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>新增排班</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">員工</label>
-              <Select>
-                <SelectTrigger><SelectValue placeholder="選擇員工" /></SelectTrigger>
-                <SelectContent>
-                  {MOCK_STAFF.map(s => (
-                    <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">日期</label>
-              <Input type="date" defaultValue={selectedDate} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">上班時間</label>
-                <Input type="time" defaultValue="09:00" />
-              </div>
-              <div>
-                <label className="text-sm font-medium">下班時間</label>
-                <Input type="time" defaultValue="18:00" />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">班別</label>
-              <Select>
-                <SelectTrigger><SelectValue placeholder="選擇班別" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="normal">正常</SelectItem>
-                  <SelectItem value="overtime">加班</SelectItem>
-                  <SelectItem value="off">休假</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>取消</Button>
-            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => { toast.success("排班已儲存"); setShowDialog(false); }}>儲存</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Week Grid */}
+      {scheduleQuery.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+      ) : (
+        <div className="grid grid-cols-7 gap-2">
+          {days.map((date, i) => {
+            const isToday = date === new Date().toISOString().split('T')[0];
+            const daySchedules = schedules.filter(s => s.date === date);
+            return (
+              <Card key={date} className={isToday ? 'border-[#06C755] border-2' : ''}>
+                <CardHeader className="p-2 pb-1">
+                  <div className="text-center">
+                    <p className={`text-xs font-bold ${isToday ? 'text-[#06C755]' : 'text-gray-400'}`}>{dayNames[i]}</p>
+                    <p className="text-sm font-medium">{date.slice(5)}</p>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-2 space-y-1 min-h-[80px]">
+                  {daySchedules.length === 0 ? (
+                    <p className="text-[10px] text-gray-300 text-center">無班次</p>
+                  ) : (
+                    daySchedules.map((s, j) => (
+                      <div key={j} className="bg-green-50 rounded p-1 text-[10px] relative group">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3 text-[#06C755]" />
+                          <span className="truncate">{s.staffName || '-'}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-400">
+                          <Clock className="h-2 w-2" />
+                          <span>{s.startTime}-{s.endTime}</span>
+                        </div>
+                        <button className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 p-0.5" onClick={() => handleDelete(s.id)}>
+                          <X className="h-3 w-3 text-red-400" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

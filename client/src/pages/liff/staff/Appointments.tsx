@@ -1,80 +1,108 @@
 /**
- * LIFF 員工今日預約頁面
+ * LIFF 員工今日預約 — 時間軸視圖、客戶資訊、服務項目
  */
-import { useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Info } from "lucide-react";
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { trpc } from '@/lib/trpc';
+import LiffLayout from '@/components/LiffLayout';
+import { Loader2, Clock, User, Phone, ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
 
-const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  pending: { label: "待確認", className: "bg-yellow-500/20 text-yellow-300" },
-  approved: { label: "已確認", className: "bg-green-500/20 text-green-300" },
-  completed: { label: "已完成", className: "bg-blue-500/20 text-blue-300" },
-  cancelled: { label: "已取消", className: "bg-red-500/20 text-red-300" },
+const statusColor: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-700', confirmed: 'bg-green-100 text-green-700',
+  completed: 'bg-blue-100 text-blue-700', cancelled: 'bg-gray-100 text-gray-500', in_progress: 'bg-purple-100 text-purple-700',
+};
+const statusLabel: Record<string, string> = {
+  pending: '待確認', confirmed: '已確認', completed: '已完成', cancelled: '已取消', in_progress: '進行中',
 };
 
-const MOCK_APPOINTMENTS = [
-  { id: 1, time: "09:00", customerName: "王小明", service: "玻尿酸注射", status: "approved", notes: "第二次療程" },
-  { id: 2, time: "10:30", customerName: "李美麗", service: "淨膚雷射", status: "approved", notes: null },
-  { id: 3, time: "13:00", customerName: "張大華", service: "肉毒桿菌", status: "pending", notes: "初診" },
-  { id: 4, time: "14:30", customerName: "陳小芳", service: "美白導入", status: "approved", notes: null },
-  { id: 5, time: "16:00", customerName: "林志偉", service: "皮秒雷射", status: "pending", notes: "敏感肌膚" },
-];
+function AppointmentsContent({ profile, tenantId }: { profile: { displayName: string; userId: string }; tenantId: number }) {
+  const [dateOffset, setDateOffset] = useState(0);
+  const getDate = (offset: number) => {
+    const d = new Date(); d.setDate(d.getDate() + offset);
+    return d.toISOString().split('T')[0];
+  };
+  const dateStr = getDate(dateOffset);
 
-export default function LiffStaffAppointments() {
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
-  const tenantId = searchParams.get("tenantId");
-  const today = new Date().toLocaleDateString("zh-TW", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
+  const query = trpc.appointment.list.useQuery({ tenantId, startDate: dateStr, endDate: dateStr });
+  const completeMutation = trpc.appointment.approve.useMutation();
 
-  if (!tenantId) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0a1628] to-[#1a2744] p-4 text-amber-400">
-        <Info className="h-12 w-12" />
-        <p className="mt-4 text-lg font-semibold">無效的頁面連結</p>
-      </div>
-    );
-  }
+  const appointments = ((query.data as any)?.appointments || (query.data as any)?.data || []) as any[];
+
+  const handleComplete = async (id: number) => {
+    try {
+      await completeMutation.mutateAsync({ appointmentId: id, tenantId });
+      query.refetch();
+    } catch (e: any) {
+      alert(`更新失敗: ${e.message}`);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a1628] to-[#1a2744] p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <Calendar className="h-6 w-6 text-amber-400" />
-        <h1 className="text-xl font-bold text-amber-400">今日預約</h1>
+    <div className="p-4 pb-20">
+      {/* Date Navigation */}
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="ghost" size="sm" onClick={() => setDateOffset(d => d - 1)}><ChevronLeft className="h-4 w-4" /></Button>
+        <div className="text-center">
+          <p className="font-bold">{dateOffset === 0 ? '今天' : dateOffset === 1 ? '明天' : dateOffset === -1 ? '昨天' : dateStr}</p>
+          <p className="text-xs text-gray-400">{dateStr}</p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => setDateOffset(d => d + 1)}><ChevronRight className="h-4 w-4" /></Button>
       </div>
-      <p className="text-gray-400 text-sm mb-4">{today}</p>
 
-      <div className="flex items-center gap-2 mb-4">
-        <Badge className="bg-amber-500/20 text-amber-300">共 {MOCK_APPOINTMENTS.length} 筆預約</Badge>
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <Card><CardContent className="p-2 text-center"><p className="text-lg font-bold">{(appointments as any[]).length}</p><p className="text-[10px] text-gray-400">總預約</p></CardContent></Card>
+        <Card><CardContent className="p-2 text-center"><p className="text-lg font-bold text-green-500">{(appointments as any[]).filter((a: any) => a.status === 'confirmed').length}</p><p className="text-[10px] text-gray-400">已確認</p></CardContent></Card>
+        <Card><CardContent className="p-2 text-center"><p className="text-lg font-bold text-blue-500">{(appointments as any[]).filter((a: any) => a.status === 'completed').length}</p><p className="text-[10px] text-gray-400">已完成</p></CardContent></Card>
       </div>
 
-      <div className="space-y-3">
-        {MOCK_APPOINTMENTS.map(apt => {
-          const statusInfo = STATUS_MAP[apt.status] || STATUS_MAP.pending;
-          return (
-            <Card key={apt.id} className="bg-white/5 border-amber-400/20">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex gap-3">
-                    <div className="text-center min-w-[50px]">
-                      <Clock className="h-4 w-4 text-amber-400 mx-auto mb-1" />
-                      <p className="text-white font-mono font-bold text-sm">{apt.time}</p>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <User className="h-3.5 w-3.5 text-gray-400" />
-                        <span className="text-white font-medium">{apt.customerName}</span>
+      {/* Timeline */}
+      {query.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#06C755]" /></div>
+      ) : (appointments as any[]).length === 0 ? (
+        <p className="text-center text-gray-400 py-8">今日無預約</p>
+      ) : (
+        <div className="relative">
+          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
+          <div className="space-y-4">
+            {(appointments as any[]).sort((a: any, b: any) => (a.time || a.time_slot || '').localeCompare(b.time || b.time_slot || '')).map((apt: any) => (
+              <div key={apt.id} className="relative pl-10">
+                <div className="absolute left-2.5 w-3 h-3 rounded-full bg-[#06C755] border-2 border-white" />
+                <Card>
+                  <CardContent className="p-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-1 text-sm font-bold text-[#06C755]">
+                        <Clock className="h-3 w-3" /> {apt.time || apt.time_slot || '-'}
                       </div>
-                      <p className="text-amber-400/80 text-sm mt-0.5">{apt.service}</p>
-                      {apt.notes && <p className="text-gray-500 text-xs mt-1">{apt.notes}</p>}
+                      <Badge className={statusColor[apt.status] || 'bg-gray-100'}>{statusLabel[apt.status] || apt.status}</Badge>
                     </div>
-                  </div>
-                  <Badge className={statusInfo.className}>{statusInfo.label}</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                    <p className="text-sm font-medium">{apt.service_name || apt.serviceName || '-'}</p>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                      <span className="flex items-center gap-1"><User className="h-3 w-3" /> {apt.customer_name || apt.customerName || '-'}</span>
+                      {(apt.customer_phone || apt.customerPhone) && (
+                        <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {apt.customer_phone || apt.customerPhone}</span>
+                      )}
+                    </div>
+                    {apt.notes && <p className="text-xs text-gray-400 mt-1 bg-gray-50 rounded p-2">{apt.notes}</p>}
+                    {apt.status === 'confirmed' && (
+                      <Button size="sm" className="mt-2 bg-[#06C755] hover:bg-[#05a847] text-white text-xs h-7"
+                        disabled={completeMutation.isPending} onClick={() => handleComplete(apt.id)}>
+                        <CheckCircle className="h-3 w-3 mr-1" /> 完成服務
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+export default function StaffAppointments() {
+  return <LiffLayout title="今日預約">{(props) => <AppointmentsContent {...props} />}</LiffLayout>;
 }

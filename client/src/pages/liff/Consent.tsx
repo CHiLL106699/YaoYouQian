@@ -1,146 +1,154 @@
 /**
- * LIFF 同意書簽署頁面
- * 客戶閱讀並簽署療程同意書
+ * LIFF 同意書簽署 — 顯示內容、簽名板、提交
  */
-import { useState, useMemo } from "react";
-import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { FileText, CheckCircle2, Loader2, Info, PenTool } from "lucide-react";
+import React, { useState, useRef, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { trpc } from '@/lib/trpc';
+import LiffLayout from '@/components/LiffLayout';
+import { closeLiffWindow } from '@/lib/liff';
+import { Loader2, CheckCircle, FileText, Eraser } from 'lucide-react';
 
-export default function LiffConsent() {
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
-  const tenantId = searchParams.get("tenantId");
-  const [selectedFormId, setSelectedFormId] = useState<number | null>(null);
-  const [agreed, setAgreed] = useState(false);
-  const [signatureName, setSignatureName] = useState("");
-  const [signed, setSigned] = useState<Set<number>>(new Set());
+function ConsentContent({ profile, tenantId }: { profile: { displayName: string; userId: string }; tenantId: number }) {
+  const [step, setStep] = useState<'list' | 'sign' | 'done'>('list');
+  const [selectedForm, setSelectedForm] = useState<{ id: number; title: string; content: string } | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasSigned, setHasSigned] = useState(false);
 
-  const { data: forms, isLoading } = trpc.consentForm.list.useQuery(
-    { tenantId: Number(tenantId) },
-    { enabled: !!tenantId && !isNaN(Number(tenantId)) }
-  );
+  const formsQuery = trpc.consentForm.list.useQuery({ tenantId, page: 1, pageSize: 20 });
+  const signMutation = trpc.consentForm.update.useMutation();
 
-  const formsList = forms && typeof forms === 'object' && 'forms' in (forms as Record<string, unknown>) ? (forms as unknown as { forms: any[] }).forms : (forms as unknown as any[] | undefined);
-  const selectedForm = formsList?.find((f: { id: number }) => f.id === selectedFormId);
-
-  const handleSign = () => {
-    if (!signatureName.trim()) {
-      toast.error("請輸入簽署姓名");
-      return;
+  // Canvas drawing
+  useEffect(() => {
+    if (step === 'sign' && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        canvas.width = canvas.offsetWidth * 2;
+        canvas.height = canvas.offsetHeight * 2;
+        ctx.scale(2, 2);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+      }
     }
-    if (!agreed) {
-      toast.error("請先勾選同意");
-      return;
+  }, [step]);
+
+  const getPos = (e: React.TouchEvent | React.MouseEvent) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    if ('touches' in e) {
+      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
     }
-    if (selectedFormId) {
-      setSigned(prev => new Set(prev).add(selectedFormId));
-    }
-    toast.success("同意書簽署完成");
-    setSelectedFormId(null);
-    setAgreed(false);
-    setSignatureName("");
+    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
   };
 
-  if (!tenantId || isNaN(Number(tenantId))) {
+  const startDraw = (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    setIsDrawing(true);
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) { const { x, y } = getPos(e); ctx.beginPath(); ctx.moveTo(x, y); }
+  };
+
+  const draw = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!isDrawing) return;
+    e.preventDefault();
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) { const { x, y } = getPos(e); ctx.lineTo(x, y); ctx.stroke(); setHasSigned(true); }
+  };
+
+  const endDraw = () => setIsDrawing(false);
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) { ctx.clearRect(0, 0, canvas.width, canvas.height); setHasSigned(false); }
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedForm || !canvasRef.current) return;
+    const signatureData = canvasRef.current.toDataURL('image/png');
+    try {
+      await signMutation.mutateAsync({
+        id: selectedForm.id,
+        tenantId,
+        signatureData,
+      });
+      setStep('done');
+    } catch (e: any) {
+      alert(`簽署失敗: ${e.message}`);
+    }
+  };
+
+  if (step === 'done') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0a1628] to-[#1a2744] p-4 text-amber-400">
-        <Info className="h-12 w-12" />
-        <p className="mt-4 text-lg font-semibold">無效的頁面連結</p>
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+        <CheckCircle className="h-16 w-16 text-[#06C755] mb-4" />
+        <h2 className="text-xl font-bold mb-2">簽署完成！</h2>
+        <p className="text-gray-500 text-sm text-center">同意書已成功提交</p>
+        <Button className="mt-6 bg-[#06C755] hover:bg-[#05a847] text-white" onClick={() => closeLiffWindow()}>關閉</Button>
+      </div>
+    );
+  }
+
+  if (step === 'sign' && selectedForm) {
+    return (
+      <div className="p-4 pb-24">
+        <h2 className="text-lg font-bold mb-3">{selectedForm.title || '同意書'}</h2>
+        <Card className="mb-4">
+          <CardContent className="p-4 text-sm text-gray-600 leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
+            {selectedForm.content || '同意書內容載入中...'}
+          </CardContent>
+        </Card>
+        <div className="mb-3">
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-sm font-medium">請在下方簽名</p>
+            <Button variant="ghost" size="sm" onClick={clearCanvas}><Eraser className="h-4 w-4 mr-1" /> 清除</Button>
+          </div>
+          <canvas ref={canvasRef} className="w-full h-40 bg-white border-2 border-dashed border-gray-300 rounded-xl touch-none"
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw} />
+        </div>
+        <Button className="w-full h-12 bg-[#06C755] hover:bg-[#05a847] text-white text-base font-bold"
+          disabled={!hasSigned || signMutation.isPending} onClick={handleSubmit}>
+          {signMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : '確認簽署'}
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a1628] to-[#1a2744] p-4">
-      <div className="flex items-center gap-2 mb-6">
-        <FileText className="h-6 w-6 text-amber-400" />
-        <h1 className="text-xl font-bold text-amber-400">同意書簽署</h1>
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
-        </div>
-      ) : !formsList || formsList.length === 0 ? (
-        <div className="text-center py-20 text-gray-400">
-          <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p>目前沒有需要簽署的同意書</p>
-        </div>
+    <div className="p-4 pb-20">
+      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+        <FileText className="h-5 w-5 text-[#06C755]" /> 同意書簽署
+      </h2>
+      {formsQuery.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#06C755]" /></div>
+      ) : (formsQuery.data?.forms || []).length === 0 ? (
+        <p className="text-center text-gray-400 py-8">暫無待簽署的同意書</p>
       ) : (
         <div className="space-y-3">
-          {formsList.map((form: { id: number; name: string; description?: string }) => (
-            <Card
-              key={form.id}
-              className="bg-white/5 border-amber-400/20 cursor-pointer hover:bg-white/10 transition-colors"
-              onClick={() => { setSelectedFormId(form.id); setAgreed(false); setSignatureName(""); }}
-            >
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-amber-400/70" />
-                  <div>
-                    <p className="text-white font-medium">{form.name}</p>
-                    {form.description && <p className="text-gray-400 text-sm">{form.description}</p>}
-                  </div>
+          {(formsQuery.data?.forms || []).map((form: any) => (
+            <Card key={form.id} className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => { setSelectedForm({ id: form.id, title: form.form_type || '同意書', content: form.content || '' }); setStep('sign'); }}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <FileText className="h-8 w-8 text-[#06C755] flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">{form.form_type || '同意書'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{form.created_at ? new Date(form.created_at).toLocaleDateString('zh-TW') : ''}</p>
                 </div>
-                {signed.has(form.id) ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-400" />
-                ) : (
-                  <PenTool className="h-5 w-5 text-amber-400/50" />
-                )}
               </CardContent>
             </Card>
           ))}
         </div>
       )}
-
-      {/* Consent Form Dialog */}
-      <Dialog open={!!selectedFormId} onOpenChange={() => setSelectedFormId(null)}>
-        <DialogContent className="bg-[#0f1d35] border-amber-400/30 text-white max-w-sm max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-amber-400">{selectedForm?.name || "同意書"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-white/5 rounded-lg p-4 text-sm text-gray-300 leading-relaxed max-h-48 overflow-y-auto">
-              {(selectedForm as { content?: string })?.content || "同意書內容載入中..."}
-            </div>
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="agree"
-                checked={agreed}
-                onCheckedChange={(checked) => setAgreed(checked === true)}
-                className="border-amber-400/50 data-[state=checked]:bg-amber-500"
-              />
-              <label htmlFor="agree" className="text-sm text-gray-300 cursor-pointer">
-                本人已詳細閱讀並了解上述同意書內容，同意接受相關療程及處置。
-              </label>
-            </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">簽署姓名</label>
-              <Input
-                value={signatureName}
-                onChange={e => setSignatureName(e.target.value)}
-                placeholder="請輸入您的姓名"
-                className="bg-white/10 border-amber-400/30 text-white"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold"
-              disabled={!agreed || !signatureName.trim()}
-              onClick={handleSign}
-            >
-              <PenTool className="h-4 w-4 mr-2" />
-              確認簽署
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
+}
+
+export default function LiffConsent() {
+  return <LiffLayout title="同意書簽署">{(props) => <ConsentContent {...props} />}</LiffLayout>;
 }

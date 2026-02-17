@@ -1,171 +1,180 @@
 /**
- * LIFF 線上商城頁面
- * 商品瀏覽、加入購物車、結帳
+ * LIFF 線上商城 — 商品分類、列表、詳情、購物車、結帳
  */
-import { useState, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ShoppingCart, Plus, Minus, Package, Loader2, Search, Trash2 } from "lucide-react";
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { trpc } from '@/lib/trpc';
+import LiffLayout from '@/components/LiffLayout';
+import { Loader2, ShoppingCart, Plus, Minus, ArrowLeft, Package, Trash2 } from 'lucide-react';
 
-interface CartItem {
-  productId: number;
-  name: string;
-  price: number;
-  quantity: number;
-  imageUrl: string | null;
-}
+interface CartItem { productId: number; name: string; price: number; quantity: number; imageUrl: string | null; }
 
-// Mock products for now
-const MOCK_PRODUCTS = [
-  { id: 1, name: "玻尿酸精華液", description: "高濃度保濕精華", price: "1280", stock: 50, category: "保養品", imageUrl: null },
-  { id: 2, name: "膠原蛋白面膜", description: "深層修護面膜 5入", price: "890", stock: 100, category: "保養品", imageUrl: null },
-  { id: 3, name: "美白導入安瓶", description: "專業級美白安瓶", price: "2480", stock: 30, category: "療程加購", imageUrl: null },
-  { id: 4, name: "術後修護霜", description: "醫美術後專用修護", price: "1680", stock: 45, category: "術後護理", imageUrl: null },
-];
-
-export default function LiffShop() {
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
-  const tenantId = searchParams.get("tenantId");
+function ShopContent({ profile, tenantId }: { profile: { displayName: string; userId: string }; tenantId: number }) {
+  const [view, setView] = useState<'list' | 'detail' | 'cart' | 'done'>('list');
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [showCart, setShowCart] = useState(false);
-  const [search, setSearch] = useState("");
+  const [shippingAddress, setShippingAddress] = useState('');
 
-  const products = MOCK_PRODUCTS;
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.category?.toLowerCase().includes(search.toLowerCase())
+  const productsQuery = trpc.line.liffShop.getProducts.useQuery({ tenantId, limit: 50 });
+  const productDetailQuery = trpc.line.liffShop.getProduct.useQuery(
+    { id: selectedProductId || 0, tenantId },
+    { enabled: !!selectedProductId && view === 'detail' }
   );
+  const createOrderMutation = trpc.line.liffShop.createOrder.useMutation();
 
-  const addToCart = (product: typeof MOCK_PRODUCTS[0]) => {
+  const addToCart = (product: { id: number; name: string; price: string; imageUrl: string | null }) => {
     setCart(prev => {
-      const existing = prev.find(item => item.productId === product.id);
-      if (existing) {
-        return prev.map(item =>
-          item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
+      const existing = prev.find(i => i.productId === product.id);
+      if (existing) return prev.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
       return [...prev, { productId: product.id, name: product.name, price: Number(product.price), quantity: 1, imageUrl: product.imageUrl }];
     });
   };
 
-  const updateQuantity = (productId: number, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.productId === productId) {
-        const newQty = item.quantity + delta;
-        return newQty > 0 ? { ...item, quantity: newQty } : item;
-      }
-      return item;
-    }).filter(item => item.quantity > 0));
+  const updateQty = (productId: number, delta: number) => {
+    setCart(prev => prev.map(i => i.productId === productId ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i).filter(i => i.quantity > 0));
   };
 
-  const removeFromCart = (productId: number) => {
-    setCart(prev => prev.filter(item => item.productId !== productId));
+  const totalAmount = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const totalItems = cart.reduce((sum, i) => sum + i.quantity, 0);
+
+  const handleCheckout = async () => {
+    try {
+      await createOrderMutation.mutateAsync({
+        tenantId, lineUserId: profile.userId,
+        items: cart.map(i => ({ productId: i.productId, quantity: i.quantity })),
+        shippingAddress: shippingAddress || undefined,
+      });
+      setCart([]);
+      setView('done');
+    } catch (e: any) {
+      alert(`下單失敗: ${e.message}`);
+    }
   };
 
-  const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-  if (!tenantId) {
+  if (view === 'done') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0a1628] to-[#1a2744] p-4 text-amber-400">
-        <Package className="h-12 w-12" />
-        <p className="mt-4 text-lg font-semibold">無效的頁面連結</p>
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+        <Package className="h-16 w-16 text-[#06C755] mb-4" />
+        <h2 className="text-xl font-bold mb-2">訂單已送出！</h2>
+        <p className="text-gray-500 text-sm text-center">我們將透過 LINE 通知您訂單狀態</p>
+        <Button className="mt-6 bg-[#06C755] hover:bg-[#05a847] text-white" onClick={() => setView('list')}>繼續購物</Button>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a1628] to-[#1a2744] pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#0a1628]/95 backdrop-blur-sm border-b border-amber-400/20 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-amber-400">線上商城</h1>
-          <Button variant="outline" size="sm" className="relative border-amber-400/50 text-amber-400" onClick={() => setShowCart(true)}>
-            <ShoppingCart className="h-4 w-4 mr-1" />
-            購物車
-            {totalItems > 0 && (
-              <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1.5 py-0.5">{totalItems}</Badge>
-            )}
-          </Button>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="搜尋商品..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-10 bg-white/10 border-amber-400/30 text-white placeholder:text-gray-400"
-          />
-        </div>
-      </div>
-
-      {/* Product Grid */}
-      <div className="grid grid-cols-2 gap-3 p-4">
-        {filteredProducts.map(product => (
-          <Card key={product.id} className="bg-white/5 border-amber-400/20 overflow-hidden">
-            <div className="aspect-square bg-gradient-to-br from-amber-400/10 to-amber-600/10 flex items-center justify-center">
-              <Package className="h-12 w-12 text-amber-400/40" />
-            </div>
-            <CardContent className="p-3">
-              <p className="text-white font-medium text-sm truncate">{product.name}</p>
-              <p className="text-gray-400 text-xs mt-1 line-clamp-1">{product.description}</p>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-amber-400 font-bold">NT${product.price}</span>
-                <Button size="sm" className="h-7 bg-amber-500 hover:bg-amber-600 text-black text-xs" onClick={() => addToCart(product)}>
-                  <Plus className="h-3 w-3 mr-0.5" /> 加入
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Cart Dialog */}
-      <Dialog open={showCart} onOpenChange={setShowCart}>
-        <DialogContent className="bg-[#0f1d35] border-amber-400/30 text-white max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-amber-400">購物車</DialogTitle>
-          </DialogHeader>
-          {cart.length === 0 ? (
-            <p className="text-center text-gray-400 py-8">購物車是空的</p>
-          ) : (
-            <div className="space-y-3 max-h-60 overflow-y-auto">
-              {cart.map(item => (
-                <div key={item.productId} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
+  if (view === 'cart') {
+    return (
+      <div className="p-4 pb-24">
+        <button onClick={() => setView('list')} className="flex items-center text-sm text-gray-500 mb-3"><ArrowLeft className="h-4 w-4 mr-1" /> 繼續購物</button>
+        <h2 className="text-lg font-bold mb-4">購物車</h2>
+        {cart.length === 0 ? (
+          <p className="text-center text-gray-400 py-8">購物車是空的</p>
+        ) : (
+          <div className="space-y-3">
+            {cart.map(item => (
+              <Card key={item.productId}>
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-cover rounded-lg" /> : <Package className="h-6 w-6 text-gray-300" />}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-amber-400 text-sm">NT${item.price}</p>
+                    <p className="text-xs text-[#06C755] font-bold">NT${item.price}</p>
                   </div>
-                  <div className="flex items-center gap-2 ml-2">
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0 border-amber-400/30" onClick={() => updateQuantity(item.productId, -1)}>
-                      <Minus className="h-3 w-3" />
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQty(item.productId, -1)}><Minus className="h-3 w-3" /></Button>
                     <span className="text-sm w-6 text-center">{item.quantity}</span>
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0 border-amber-400/30" onClick={() => updateQuantity(item.productId, 1)}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-400" onClick={() => removeFromCart(item.productId)}>
-                      <Trash2 className="h-3 w-3" />
+                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQty(item.productId, 1)}><Plus className="h-3 w-3" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400" onClick={() => setCart(prev => prev.filter(i => i.productId !== item.productId))}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            <div className="mt-4 space-y-3">
+              <Input placeholder="配送地址（選填）" value={shippingAddress} onChange={e => setShippingAddress(e.target.value)} />
+              <div className="flex justify-between items-center text-lg font-bold">
+                <span>合計</span><span className="text-[#06C755]">NT${totalAmount}</span>
+              </div>
+              <Button className="w-full h-12 bg-[#06C755] hover:bg-[#05a847] text-white text-base font-bold"
+                disabled={createOrderMutation.isPending} onClick={handleCheckout}>
+                {createOrderMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : '確認結帳'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (view === 'detail' && selectedProductId) {
+    const product = productDetailQuery.data;
+    return (
+      <div className="p-4 pb-24">
+        <button onClick={() => setView('list')} className="flex items-center text-sm text-gray-500 mb-3"><ArrowLeft className="h-4 w-4 mr-1" /> 返回</button>
+        {productDetailQuery.isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#06C755]" /></div>
+        ) : product ? (
+          <div className="space-y-4">
+            <div className="w-full aspect-square bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+              {product.imageUrl ? <img src={product.imageUrl} className="w-full h-full object-cover" /> : <Package className="h-16 w-16 text-gray-300" />}
+            </div>
+            <h2 className="text-xl font-bold">{product.name}</h2>
+            <p className="text-2xl font-bold text-[#06C755]">NT${product.price}</p>
+            {product.description && <p className="text-sm text-gray-500">{product.description}</p>}
+            <p className="text-xs text-gray-400">庫存: {product.stock}</p>
+            <Button className="w-full h-12 bg-[#06C755] hover:bg-[#05a847] text-white text-base font-bold"
+              disabled={product.stock <= 0}
+              onClick={() => { addToCart({ id: product.id, name: product.name, price: product.price, imageUrl: product.imageUrl }); setView('list'); }}>
+              {product.stock <= 0 ? '已售完' : '加入購物車'}
+            </Button>
+          </div>
+        ) : <p className="text-center text-gray-400 py-8">商品不存在</p>}
+      </div>
+    );
+  }
+
+  // Product List
+  return (
+    <div className="p-4 pb-24">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold">商品列表</h2>
+        <Button variant="outline" size="sm" className="relative" onClick={() => setView('cart')}>
+          <ShoppingCart className="h-4 w-4" />
+          {totalItems > 0 && <Badge className="absolute -top-2 -right-2 bg-[#06C755] text-white text-[10px] h-5 w-5 flex items-center justify-center p-0">{totalItems}</Badge>}
+        </Button>
+      </div>
+      {productsQuery.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#06C755]" /></div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {(productsQuery.data?.products || []).map(p => (
+            <Card key={p.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setSelectedProductId(p.id); setView('detail'); }}>
+              <CardContent className="p-0">
+                <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center overflow-hidden">
+                  {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" /> : <Package className="h-8 w-8 text-gray-300" />}
+                </div>
+                <div className="p-2">
+                  <p className="text-sm font-medium truncate">{p.name}</p>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-sm font-bold text-[#06C755]">NT${p.price}</span>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); addToCart({ id: p.id, name: p.name, price: p.price, imageUrl: p.imageUrl }); }}>
+                      <Plus className="h-4 w-4 text-[#06C755]" />
                     </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-          <DialogFooter className="flex-col gap-2">
-            <div className="flex justify-between w-full text-lg">
-              <span>合計</span>
-              <span className="text-amber-400 font-bold">NT${totalAmount.toLocaleString()}</span>
-            </div>
-            <Button className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold" disabled={cart.length === 0}>
-              前往結帳
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              </CardContent>
+            </Card>
+          ))}
+          {(productsQuery.data?.products || []).length === 0 && <p className="col-span-2 text-center text-gray-400 py-8">暫無商品</p>}
+        </div>
+      )}
     </div>
   );
+}
+
+export default function LiffShop() {
+  return <LiffLayout title="線上商城">{(props) => <ShopContent {...props} />}</LiffLayout>;
 }

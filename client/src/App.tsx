@@ -89,10 +89,12 @@ import LiffStaffAppointments from "./pages/liff/staff/Appointments";
 import LiffStaffCustomers from "./pages/liff/staff/Customers";
 import LiffStaffPerformance from "./pages/liff/staff/Performance";
 
-// === YaoYouQian Sprint 1: Manage (Admin) Pages ===
+// === YaoYouQian Sprint 2-3: Manage (Admin) Pages ===
+import ManageDashboard from "./pages/manage/ManageDashboard";
 import GamificationManagement from "./pages/manage/GamificationManagement";
 import NotificationManagement from "./pages/manage/NotificationManagement";
 import ScheduleManagement from "./pages/manage/ScheduleManagement";
+import ManageReports from "./pages/manage/ManageReports";
 
 // BI Dashboard & Marketing Automation pages
 import BIDashboard from "./pages/BIDashboard";
@@ -195,14 +197,18 @@ function Router() {
       <Route path="/campaign-execution">{() => <DashboardPage component={CampaignExecution} />}</Route>
       <Route path="/compliance-keywords">{() => <DashboardPage component={ComplianceKeywordManagement} />}</Route>
 
-      {/* === YaoYouQian Sprint 1: Manage Routes === */}
-      <Route path="/manage">{() => <DashboardPage component={TenantDashboard} />}</Route>
+      {/* === YaoYouQian Sprint 2-3: Manage Routes === */}
+      <Route path="/manage">{() => <DashboardPage component={ManageDashboard} />}</Route>
+      <Route path="/manage/dashboard">{() => <DashboardPage component={ManageDashboard} />}</Route>
       <Route path="/manage/appointments">{() => <DashboardPage component={AppointmentManagement} />}</Route>
       <Route path="/manage/customers">{() => <DashboardPage component={CustomerManagement} />}</Route>
       <Route path="/manage/staff">{() => <DashboardPage component={StaffManagement} />}</Route>
       <Route path="/manage/schedule">{() => <DashboardPage component={ScheduleManagement} />}</Route>
       <Route path="/manage/notifications">{() => <DashboardPage component={NotificationManagement} />}</Route>
       <Route path="/manage/gamification">{() => <DashboardPage component={GamificationManagement} />}</Route>
+      <Route path="/manage/services">{() => <DashboardPage component={ServiceManagement} />}</Route>
+      <Route path="/manage/products">{() => <DashboardPage component={ProductManagement} />}</Route>
+      <Route path="/manage/reports">{() => <DashboardPage component={ManageReports} />}</Route>
       <Route path="/manage/settings">{() => <DashboardPage component={TenantSettings} />}</Route>
       {/* === HRM / Payroll routes === */}
       <Route path="/staff">{() => <DashboardPage component={StaffManagement} />}</Route>

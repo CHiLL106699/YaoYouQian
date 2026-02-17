@@ -1,165 +1,82 @@
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import liff from "@line/liff";
-import { trpc } from "@/lib/trpc";
-import { useLiffTenant } from "@/hooks/useLiffTenant";
+/**
+ * LIFF 我的預約 — 查詢/取消/修改
+ */
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { trpc } from '@/lib/trpc';
+import LiffLayout from '@/components/LiffLayout';
+import { Loader2, Calendar, X, Clock, User } from 'lucide-react';
 
-interface Appointment {
-  id: string;
-  service: string;
-  date: string;
-}
+const statusColor: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-700', confirmed: 'bg-green-100 text-green-700',
+  completed: 'bg-blue-100 text-blue-700', cancelled: 'bg-gray-100 text-gray-500',
+};
+const statusLabel: Record<string, string> = {
+  pending: '待確認', confirmed: '已確認', completed: '已完成', cancelled: '已取消',
+};
 
-const MyAppointments: React.FC = () => {
-  const { tenantId } = useLiffTenant();
-  const [lineUserId, setLineUserId] = useState<string | null>(null);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [isRescheduleDialogOpen, setIsRescheduleDialogOpen] = useState(false);
-  const [newDate, setNewDate] = useState<Date | undefined>(new Date());
-  const [liffError, setLiffError] = useState<string | null>(null);
-  const [isLiffReady, setIsLiffReady] = useState(false);
+function AppointmentsContent({ profile, tenantId }: { profile: { displayName: string; userId: string }; tenantId: number }) {
+  const [filter, setFilter] = useState<'all' | 'upcoming' | 'history'>('all');
 
-  useEffect(() => {
-    const initLiffApp = async () => {
-      try {
-        await liff.init({
-          liffId: import.meta.env.VITE_LIFF_ID,
-          withLoginOnExternalBrowser: true,
-        });
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
-        const profile = await liff.getProfile();
-        setLineUserId(profile.userId);
-        setIsLiffReady(true);
-      } catch (err: any) {
-        setLiffError(err.toString());
-      }
-    };
-    initLiffApp();
-  }, []);
+  const query = trpc.line.liffMember.getMyAppointments.useQuery({ tenantId, lineUserId: profile.userId, status: filter });
+  const cancelMutation = trpc.line.liffMember.cancelAppointment.useMutation();
 
-  // 使用 tRPC 查詢我的預約
-  const { data: rawAppointments, isLoading, error, refetch } = trpc.appointment.list.useQuery(
-    { tenantId, page: 1, pageSize: 50 },
-    { enabled: isLiffReady }
-  );
-
-  const appointments: Appointment[] = (rawAppointments?.appointments || []).map((a: any) => ({
-    id: String(a.id),
-    service: a.customers?.name ? `${a.service_name || '預約'}` : (a.service_name || '預約'),
-    date: `${a.appointment_date}T${a.appointment_time || '00:00'}`,
-  }));
-
-  const handleCancel = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setIsCancelDialogOpen(true);
+  const handleCancel = async (id: number) => {
+    if (!confirm('確定要取消此預約嗎？')) return;
+    try {
+      await cancelMutation.mutateAsync({ tenantId, lineUserId: profile.userId, appointmentId: id });
+      query.refetch();
+    } catch (e: any) {
+      alert(`取消失敗: ${e.message}`);
+    }
   };
-
-  const handleReschedule = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setIsRescheduleDialogOpen(true);
-  };
-
-  const confirmCancel = () => {
-    // 呼叫後端取消預約 API
-    console.log("取消預約:", selectedAppointment);
-    setIsCancelDialogOpen(false);
-    refetch();
-  };
-
-  const confirmReschedule = () => {
-    // 呼叫後端改期 API
-    console.log("改期預約:", selectedAppointment, "至", newDate);
-    setIsRescheduleDialogOpen(false);
-    refetch();
-  };
-
-  if (liffError) {
-    return (
-      <div className="min-h-screen bg-red-100 p-4 flex items-center justify-center">
-        <p className="text-red-700">LIFF 初始化失敗: {liffError}</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">我的預約</h1>
-      </header>
-      <main>
-        {isLoading && <div className="text-center text-gray-500">載入中...</div>}
-        {error && <div className="text-center text-red-500">錯誤: {error.message}</div>}
-        {!isLoading && !error && appointments.length === 0 && (
-          <div className="text-center text-gray-500">目前沒有任何預約。</div>
-        )}
-        <div className="space-y-4">
-          {appointments.map((appointment) => (
-            <Card key={appointment.id}>
-              <CardHeader>
-                <CardTitle>{appointment.service}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>日期: {format(new Date(appointment.date), "yyyy/MM/dd")}</p>
-                <p>時間: {format(new Date(appointment.date), "HH:mm")}</p>
+    <div className="p-4 pb-20">
+      <div className="flex gap-2 mb-4 overflow-x-auto">
+        {(['all', 'upcoming', 'history'] as const).map(f => (
+          <Button key={f} variant={filter === f ? 'default' : 'outline'} size="sm"
+            className={filter === f ? 'bg-[#06C755] hover:bg-[#05a847] text-white' : ''}
+            onClick={() => setFilter(f)}>
+            {f === 'all' ? '全部' : f === 'upcoming' ? '即將到來' : '已完成'}
+          </Button>
+        ))}
+      </div>
+
+      {query.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#06C755]" /></div>
+      ) : (query.data?.appointments || []).length === 0 ? (
+        <p className="text-center text-gray-400 py-8">暫無預約紀錄</p>
+      ) : (
+        <div className="space-y-3">
+          {(query.data?.appointments || []).map(apt => (
+            <Card key={apt.id}>
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-medium text-sm">{apt.serviceName}</h3>
+                  <Badge className={statusColor[apt.status] || 'bg-gray-100'}>{statusLabel[apt.status] || apt.status}</Badge>
+                </div>
+                <div className="space-y-1 text-xs text-gray-500">
+                  <div className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {apt.date}</div>
+                  <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {apt.time}</div>
+                  {apt.staffName && <div className="flex items-center gap-1"><User className="h-3 w-3" /> {apt.staffName}</div>}
+                </div>
+                {(apt.status === 'pending' || apt.status === 'confirmed') && (
+                  <Button variant="ghost" size="sm" className="mt-2 text-red-500 text-xs h-7" onClick={() => handleCancel(apt.id)}>
+                    <X className="h-3 w-3 mr-1" /> 取消預約
+                  </Button>
+                )}
               </CardContent>
-              <CardFooter className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => handleCancel(appointment)}>取消</Button>
-                <Button onClick={() => handleReschedule(appointment)}>改期</Button>
-              </CardFooter>
             </Card>
           ))}
         </div>
-      </main>
-
-      {/* 取消預約 Dialog */}
-      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>確認取消預約？</DialogTitle>
-            <DialogDescription>
-              您確定要取消「{selectedAppointment?.service}」這個預約嗎？此操作無法復原。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsCancelDialogOpen(false)}>關閉</Button>
-            <Button variant="destructive" onClick={confirmCancel}>確認取消</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 改期預約 Dialog */}
-      <Dialog open={isRescheduleDialogOpen} onOpenChange={setIsRescheduleDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>申請改期</DialogTitle>
-            <DialogDescription>
-              請選擇您希望改期的日期。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Calendar
-              mode="single"
-              selected={newDate}
-              onSelect={setNewDate}
-              className="rounded-md border"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsRescheduleDialogOpen(false)}>關閉</Button>
-            <Button onClick={confirmReschedule}>確認改期</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      )}
     </div>
   );
-};
+}
 
-export default MyAppointments;
+export default function LiffMyAppointments() {
+  return <LiffLayout title="我的預約">{(props) => <AppointmentsContent {...props} />}</LiffLayout>;
+}

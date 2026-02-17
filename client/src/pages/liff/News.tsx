@@ -1,116 +1,69 @@
 /**
- * LIFF 最新消息頁面
- * 診所公告、活動資訊
+ * LIFF 最新消息 — 列表、詳情、圖片展示
  */
-import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Newspaper, Calendar, ChevronRight, Info } from "lucide-react";
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { trpc } from '@/lib/trpc';
+import LiffLayout from '@/components/LiffLayout';
+import { Loader2, ArrowLeft, Newspaper, Calendar } from 'lucide-react';
 
-interface NewsItem {
-  id: number;
-  title: string;
-  summary: string;
-  content: string;
-  category: string;
-  date: string;
-  imageUrl: string | null;
-}
+function NewsContent({ tenantId }: { profile: { displayName: string; userId: string }; tenantId: number }) {
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
-const MOCK_NEWS: NewsItem[] = [
-  {
-    id: 1, title: "春季美白療程優惠", summary: "全館美白療程 85 折起", category: "優惠",
-    content: "即日起至 3/31，全館美白療程享 85 折優惠！包含淨膚雷射、美白導入、維他命C導入等熱門項目。名額有限，歡迎提前預約。",
-    date: "2026-02-15", imageUrl: null,
-  },
-  {
-    id: 2, title: "新進駐醫師公告", summary: "歡迎王醫師加入團隊", category: "公告",
-    content: "本院新進駐王美麗醫師，專長為微整形注射、玻尿酸填充、肉毒桿菌除皺。歡迎預約諮詢。",
-    date: "2026-02-10", imageUrl: null,
-  },
-  {
-    id: 3, title: "農曆新年營業時間", summary: "春節期間營業時間調整", category: "公告",
-    content: "農曆除夕至初三休診，初四起恢復正常營業。祝大家新年快樂！",
-    date: "2026-02-01", imageUrl: null,
-  },
-];
+  const listQuery = trpc.notification.list.useQuery(
+    { tenantId, status: 'sent', channel: 'line', limit: 30 },
+  );
 
-const categoryColors: Record<string, string> = {
-  "優惠": "bg-red-500/20 text-red-300",
-  "公告": "bg-blue-500/20 text-blue-300",
-  "活動": "bg-green-500/20 text-green-300",
-};
+  const notifications = listQuery.data?.notifications || [];
+  const selected = selectedId ? notifications.find(n => n.id === selectedId) : null;
 
-export default function LiffNews() {
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
-  const tenantId = searchParams.get("tenantId");
-  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
-
-  if (!tenantId) {
+  if (selected) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0a1628] to-[#1a2744] p-4 text-amber-400">
-        <Info className="h-12 w-12" />
-        <p className="mt-4 text-lg font-semibold">無效的頁面連結</p>
+      <div className="p-4">
+        <button onClick={() => setSelectedId(null)} className="flex items-center text-sm text-gray-500 mb-4">
+          <ArrowLeft className="h-4 w-4 mr-1" /> 返回列表
+        </button>
+        <div className="bg-white rounded-xl p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-gray-800 mb-2">{selected.title}</h2>
+          <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
+            <Calendar className="h-3 w-3" />
+            <span>{selected.createdAt ? new Date(selected.createdAt).toLocaleDateString('zh-TW') : ''}</span>
+          </div>
+          <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+            {selected.content}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a1628] to-[#1a2744] p-4">
-      <div className="flex items-center gap-2 mb-6">
-        <Newspaper className="h-6 w-6 text-amber-400" />
-        <h1 className="text-xl font-bold text-amber-400">最新消息</h1>
-      </div>
-
-      <div className="space-y-3">
-        {MOCK_NEWS.map(news => (
-          <Card
-            key={news.id}
-            className="bg-white/5 border-amber-400/20 cursor-pointer hover:bg-white/10 transition-colors"
-            onClick={() => setSelectedNews(news)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge className={categoryColors[news.category] || "bg-gray-500/20 text-gray-300"}>
-                      {news.category}
-                    </Badge>
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {news.date}
-                    </span>
-                  </div>
-                  <h3 className="text-white font-medium">{news.title}</h3>
-                  <p className="text-gray-400 text-sm mt-1 line-clamp-2">{news.summary}</p>
-                </div>
-                <ChevronRight className="h-5 w-5 text-amber-400/50 flex-shrink-0 mt-1" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* News Detail Dialog */}
-      <Dialog open={!!selectedNews} onOpenChange={() => setSelectedNews(null)}>
-        <DialogContent className="bg-[#0f1d35] border-amber-400/30 text-white max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-amber-400">{selectedNews?.title}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Badge className={categoryColors[selectedNews?.category || ""] || "bg-gray-500/20 text-gray-300"}>
-                {selectedNews?.category}
-              </Badge>
-              <span className="text-xs text-gray-400">{selectedNews?.date}</span>
-            </div>
-            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
-              {selectedNews?.content}
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+    <div className="p-4 pb-20">
+      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+        <Newspaper className="h-5 w-5 text-[#06C755]" /> 最新消息
+      </h2>
+      {listQuery.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#06C755]" /></div>
+      ) : notifications.length === 0 ? (
+        <p className="text-center text-gray-400 py-8">暫無消息</p>
+      ) : (
+        <div className="space-y-3">
+          {notifications.map(n => (
+            <Card key={n.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedId(n.id)}>
+              <CardContent className="p-4">
+                <h3 className="font-medium text-sm text-gray-800 line-clamp-1">{n.title}</h3>
+                <p className="text-xs text-gray-400 mt-1 line-clamp-2">{n.content}</p>
+                <p className="text-xs text-gray-300 mt-2">{n.createdAt ? new Date(n.createdAt).toLocaleDateString('zh-TW') : ''}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+export default function LiffNews() {
+  return <LiffLayout title="最新消息">{(props) => <NewsContent {...props} />}</LiffLayout>;
 }
