@@ -50,7 +50,7 @@ export default function BookingForm() {
       if (success) {
         const profile = await getLiffProfile();
         setLineUserId(profile.userId);
-        console.log('[LIFF] Profile loaded:', profile);
+        // LIFF Profile loaded (production: no console output)
 
         // 檢查 LINE User ID 是否已繫定客戶資料
         try {

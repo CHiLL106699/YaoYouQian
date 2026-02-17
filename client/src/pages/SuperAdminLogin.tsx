@@ -10,6 +10,7 @@ import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Shield } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const loginSchema = z.object({
   email: z.string().email({ message: '請輸入有效的電子郵件地址。' }),
@@ -18,9 +19,7 @@ const loginSchema = z.object({
 
 type LoginFormInputs = z.infer<typeof loginSchema>;
 
-// 超級管理員帳號（實際應用中應從環境變數或資料庫取得）
-const SUPER_ADMIN_EMAIL = 'admin@flower-saas.com';
-const SUPER_ADMIN_PASSWORD = 'SuperAdmin@2026'; // 僅供示範，實際應使用加密與環境變數
+// 超級管理員認證透過 Supabase Auth 後端驗證，不在前端存放任何密碼
 
 const SuperAdminLogin: React.FC = () => {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormInputs>({
@@ -34,17 +33,27 @@ const SuperAdminLogin: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // 驗證超級管理員帳號
-      if (data.email === SUPER_ADMIN_EMAIL && data.password === SUPER_ADMIN_PASSWORD) {
-        // 儲存登入狀態（實際應用中應使用 JWT 或 Session）
-        sessionStorage.setItem('superAdminLoggedIn', 'true');
-        setLocation('/super-admin/dashboard');
-      } else {
+      // 透過 Supabase Auth 驗證超級管理員帳號
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+      if (authError) {
         setError('帳號或密碼錯誤');
+        return;
       }
-    } catch (err: any) {
-      console.error('登入錯誤:', err);
-      setError(err.message || '登入失敗，請稍後再試');
+      // 檢查是否具有超級管理員角色
+      const userRole = authData.user?.user_metadata?.role;
+      if (userRole !== 'super_admin') {
+        await supabase.auth.signOut();
+        setError('無權限存取超級管理員後台');
+        return;
+      }
+      sessionStorage.setItem('superAdminLoggedIn', 'true');
+      setLocation('/super-admin/dashboard');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '登入失敗，請稍後再試';
+      setError(message);
     } finally {
       setLoading(false);
     }

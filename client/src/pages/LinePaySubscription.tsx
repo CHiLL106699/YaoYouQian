@@ -28,7 +28,7 @@ const LinePaySubscription: React.FC = () => {
     setStatus('authorizing');
     try {
       // await authorizeSubscriptionMutation.mutateAsync({ transactionId, regKey });
-      console.log('LINE Pay 授權成功:', { transactionId, regKey });
+      // LINE Pay 授權成功（生產環境不輸出敢感資訊）
       setStatus('success');
       setTimeout(() => {
         setLocation('/dashboard');

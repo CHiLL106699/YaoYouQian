@@ -6,7 +6,10 @@ import React, { useEffect, useState, ReactNode } from 'react';
 import { initLiff, getLiffProfile, type LiffProfile } from '../lib/liff';
 import { Loader2 } from 'lucide-react';
 
-const LIFF_ID = import.meta.env.VITE_LIFF_ID || '2008825551-rJQAl3AY';
+const LIFF_ID = import.meta.env.VITE_LIFF_ID;
+if (!LIFF_ID) {
+  console.error('[LIFF] VITE_LIFF_ID 環境變數未設定');
+}
 
 interface LiffLayoutProps {
   children: (props: { profile: LiffProfile; tenantId: number }) => ReactNode;
